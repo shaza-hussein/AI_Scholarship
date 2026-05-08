@@ -49,6 +49,9 @@ credentials.json
 .dmypy.json
 .dmypy/
 
+# Data files
+data/
+
 # C extensions
 *.so
 
