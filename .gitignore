@@ -1,0 +1,88 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+*.whl
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE / editor directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.pot
+*.mo
+*.tmp
+*.swp
+*.swo
+
+# Environment variables and secrets
+.env
+.env.*
+secrets.yml
+credentials.json
+
+# Pytest cache
+.pytest_cache/
+
+# MyPy cache
+.mypy_cache/
+.dmypy.json
+.dmypy/
+
+# C extensions
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+
+# Cython debug symbols
+cython_debug/
+
+# Local project files
+local_settings.py
+
+# Temporary files created by editors
+*~
+*.sw?
+
+# Ignore compiled files from build tools
+*.class
+
+# Ignore pipenv and Poetry virtual env metadata
+pip-wheel-metadata/
+.pytest_cache/
+
+# Ignore VS Code workspace storage (if any)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
