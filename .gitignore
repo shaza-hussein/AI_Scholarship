@@ -51,6 +51,8 @@ credentials.json
 
 # Data files
 data/
+data_Json/
+data_csv/
 
 # C extensions
 *.so
