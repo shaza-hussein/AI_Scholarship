@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import time
 import json
 import random
-import re  # ضروري لاستخدام التعبيرات النمطية في البحث عن العنوان
+import re
 
 # 1. Virtual browser settings to avoid blocking
 HEADERS = {
@@ -16,15 +16,13 @@ session.headers.update(HEADERS)
 
 def get_scholarship_links():
     """
-    Phase 1: Collect links from the list page (table)
+    Phase 1: Collect links from the list page (Web Design category)
     """
-    print(">>> Starting Phase 1: Collecting scholarship links...")
+    print(">>> Starting Phase 1: Collecting Web Design scholarship links...")
     scholarship_urls = []
     
-    # URL for the scholarship list
-    search_url = "https://www.scholarships.com/financial-aid/college-scholarships/scholarship-directory/academic-major/theology"
+    search_url = "https://www.scholarships.com/financial-aid/college-scholarships/scholarship-directory/academic-major/web-design"
     
-    print("Fetching scholarship list links...")
     try:
         response = session.get(search_url, timeout=10)
         
@@ -34,7 +32,6 @@ def get_scholarship_links():
             
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Extract links from the table
         link_elements = soup.select('td a.blacklink')
         
         if not link_elements:
@@ -48,17 +45,17 @@ def get_scholarship_links():
                 if full_link not in scholarship_urls:
                     scholarship_urls.append(full_link)
         
-        print(f"Successfully found {len(link_elements)} links.")
+        print(f"Successfully found {len(scholarship_urls)} links.")
         
     except Exception as e:
         print(f"Error occurred while fetching the list: {e}")
             
-    print(f"\nCollected {len(scholarship_urls)} links ready for Phase 2!\n")
+    print(f"\nLinks collected and ready for Phase 2!\n")
     return scholarship_urls
 
 def extract_scholarship_data(url):
     """
-    Phase 2: Extract details with Tags, Awards Available, and Smart Text Matching for location/state
+    Phase 2: Extract comprehensive details including tags, awards count, and location
     """
     try:
         response = session.get(url, timeout=10)
@@ -68,17 +65,13 @@ def extract_scholarship_data(url):
         name_elem = soup.find('h1')
         scholarship_name = name_elem.text.strip() if name_elem else "N/A"
         
-        # 2. Extract Deadline and Funding
+        # 2. Extract Amount and Deadline
         h5_tags = soup.find_all('h5')
-        funding_type = "N/A"
-        deadline = "N/A"
-        
-        if len(h5_tags) >= 2:
-            funding_type = h5_tags[0].text.strip()
-            deadline = h5_tags[1].text.strip()
+        funding_type = h5_tags[0].text.strip() if len(h5_tags) >= 1 else "N/A"
+        deadline = h5_tags[1].text.strip() if len(h5_tags) >= 2 else "N/A"
 
         # ---------------------------------------------------------
-        # 3. Extract Awards Available and Tags
+        # 3. Extract Awards Available and Metadata Tags
         # ---------------------------------------------------------
         awards_available = "N/A"
         tags = []
@@ -96,43 +89,28 @@ def extract_scholarship_data(url):
                 tags = [tag.text.strip() for tag in tags_container.find_all('div')]
 
         # ---------------------------------------------------------
-        # 4. Extract multiple text sections
+        # 4. Extract Textual Sections (Description, Details, Eligibility, Process)
         # ---------------------------------------------------------
-        description = "N/A"
-        details = "N/A"
-        eligibility = "N/A"
-        application_process = "N/A"
+        description, details, eligibility, application_process = "N/A", "N/A", "N/A", "N/A"
         
         main_desc_heading = soup.find('h2', string=lambda text: text and 'Scholarship Description' in text)
-        
         if main_desc_heading:
             content_div = main_desc_heading.find_next_sibling('div')
-            
             if content_div:
                 first_p = content_div.find('p')
-                if first_p:
-                    description = first_p.get_text(strip=True)
+                if first_p: description = first_p.get_text(strip=True)
                 
-                details_heading = content_div.find('h2', string=lambda text: text and 'Details' in text)
-                if details_heading:
-                    details_elem = details_heading.find_next_sibling()
-                    if details_elem:
-                        details = details_elem.get_text(separator="\n", strip=True)
-                        
-                eligibility_heading = content_div.find('h2', string=lambda text: text and 'Eligibility' in text)
-                if eligibility_heading:
-                    eligibility_elem = eligibility_heading.find_next_sibling()
-                    if eligibility_elem:
-                        eligibility = eligibility_elem.get_text(separator="\n", strip=True)
-                        
-                app_heading = content_div.find('h2', string=lambda text: text and 'Application Process' in text)
-                if app_heading:
-                    app_elem = app_heading.find_next_sibling()
-                    if app_elem:
-                        application_process = app_elem.get_text(separator="\n", strip=True)
+                det_h2 = content_div.find('h2', string=lambda text: text and 'Details' in text)
+                if det_h2: details = det_h2.find_next_sibling().get_text(separator="\n", strip=True)
+                
+                elig_h2 = content_div.find('h2', string=lambda text: text and 'Eligibility' in text)
+                if elig_h2: eligibility = elig_h2.find_next_sibling().get_text(separator="\n", strip=True)
+                
+                app_h2 = content_div.find('h2', string=lambda text: text and 'Application Process' in text)
+                if app_h2: application_process = app_h2.find_next_sibling().get_text(separator="\n", strip=True)
 
         # ---------------------------------------------------------
-        # 5. Smart Location Search (Regex method avoiding copyright)
+        # 5. Strict Geographical Location Search
         # ---------------------------------------------------------
         location = "USA"
         contact_div = soup.find('div', class_='contactDetail')
@@ -140,7 +118,6 @@ def extract_scholarship_data(url):
         if contact_div:
             lines = [l.strip() for line in contact_div.stripped_strings for l in line.split('\n') if l.strip()]
             for line in lines:
-                # Pattern matching for US Address: City, ST 12345
                 if re.search(r', [A-Z]{2} \d+', line):
                     location = f"{line} (USA)"
                     break
@@ -151,13 +128,12 @@ def extract_scholarship_data(url):
                 if len(line) < 100 and re.search(r', [A-Z]{2} \d+', line):
                     location = f"{line} (USA)"
                     break
-        # ---------------------------------------------------------
-        
-        # 6. Build enhanced data structure for JSON
+
+        # 6. Build final data structure for JSON
         data = {
             "scholarship_name": scholarship_name,
             "country": location, 
-            "degree_level": "Theology/Ministry", 
+            "degree_level": "Web Design / Creative Arts", 
             "funding_type": funding_type,
             "awards_available": awards_available,
             "deadline": deadline,
@@ -171,33 +147,35 @@ def extract_scholarship_data(url):
         return data
 
     except Exception as e:
-        print(f"Failed to extract data from link {url}: {e}")
+        print(f"Failed to extract data for link {url}: {e}")
         return None
 
 def main():
     urls = get_scholarship_links()
-    all_scholarships_data = []
+    results = []
     
     if not urls:
-        print("No links found to start Phase 2.")
+        print("No links found to start Phase 2. Aborting.")
         return
 
     print(">>> Starting Phase 2: Extracting scholarship details (this will take time to avoid blocking)...")
     
     for index, url in enumerate(urls, 1):
-        print(f"Processing scholarship ({index}/{len(urls)})...")
+        print(f"[{index}/{len(urls)}] Processing scholarship...")
         data = extract_scholarship_data(url)
         
         if data:
-            all_scholarships_data.append(data)
+            results.append(data)
             
+        # Crucial time delay to avoid IP banning
         time.sleep(random.uniform(1.5, 3.0)) 
         
     print("\n>>> Saving data...")
-    with open('theology_scholarships_data.json', 'w', encoding='utf-8') as f:
-        json.dump(all_scholarships_data, f, ensure_ascii=False, indent=4)
+    filename = 'web_design_scholarships_data.json'
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
         
-    print(f"Completed successfully! Saved {len(all_scholarships_data)} scholarships to 'theology_scholarships_data.json'")
+    print(f"Process completed successfully! Saved {len(results)} scholarships to '{filename}'")
 
 if __name__ == "__main__":
     main()
