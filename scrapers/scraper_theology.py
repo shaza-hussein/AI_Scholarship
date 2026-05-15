@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import time
 import json
 import random
-import re  # ضروري لاستخدام التعبيرات النمطية في البحث عن العنوان
+import re  
 
 # 1. Virtual browser settings to avoid blocking
 HEADERS = {
