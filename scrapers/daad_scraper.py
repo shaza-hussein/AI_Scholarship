@@ -8,7 +8,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
-# 1. Target Data Settings
+
 COUNTRIES = {
     "Egypt": "55", 
     "Syria": "97", 
@@ -49,7 +49,7 @@ def get_scholarship_links(driver):
     page_number = 1
     
     while True:
-        # الرابط الديناميكي للانتقال بين الصفحات
+        
         paginated_url = f"https://www2.daad.de/deutschland/stipendium/datenbank/en/21148-scholarship-database/?status=&origin=&subjectGrps=&daad=&intention=&q=&page={page_number}&lang=en"
         
         print(f" -> Scraping Page {page_number}...")
@@ -60,7 +60,7 @@ def get_scholarship_links(driver):
         
         results = soup.select('ul.resultlist li.entry h2 a')
         
-        # التوقف عند الوصول لصفحة لا تحتوي على نتائج
+       
         if not results:
             print(f"Reached the end of the database. Last page with results was {page_number - 1}.")
             break
@@ -76,7 +76,7 @@ def get_scholarship_links(driver):
         
         page_number += 1
             
-    # إزالة التكرار إن وجد
+    
     unique_links = list(set(all_links))
     print(f"\nSuccessfully collected a total of {len(unique_links)} unique scholarships from all pages.")
     
