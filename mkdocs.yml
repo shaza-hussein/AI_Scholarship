@@ -1,0 +1,13 @@
+site_name: AI Scholarship Matching System
+theme:
+  name: material
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+
+nav:
+  - Home: index.md
+  - NLP Processors: nlp_docs.md
