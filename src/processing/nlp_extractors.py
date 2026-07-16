@@ -39,9 +39,17 @@ class ScholarshipDataProcessor:
             "Doctoral/PhD": ["phd", "doctoral", "doctorate", "post-doc", "postdoctoral"]
         }
         
+
         self.funding_taxonomy = {
-            "Fully Funded": ["full ride", "fully funded", "covers tuition and living", "full tuition", "100% tuition"],
-            "Partially Funded": ["partial", "covers tuition only", "discount", "contribution", "stipend only"]
+            "Fully Funded": [
+                "full ride", "fully funded", "covers tuition and living", "full tuition", 
+                "monthly payment", "monthly payments", "monthly stipend", "stipend", 
+                "living expenses", "travel allowance", "health insurance", "comprehensive"
+            ],
+            "Partially Funded": [
+                "partial", "covers tuition only", "discount", "contribution", 
+                "stipend only", "one-time", "lump sum", "fee reduction"
+            ]
         }
         
         self._build_spacy_rules()
@@ -64,30 +72,77 @@ class ScholarshipDataProcessor:
         ]
         return " ".join([p for p in context_parts if p.lower() not in ['nan', 'n/a', 'none']])
 
+    # def process_funding(self, row):
+    #     """
+    #     Processes the funding column to extract category and monetary value if present.
+    #     """
+    #     funding_raw = str(row.get('funding_type', '')).lower()
+        
+
+    #     boilerplate = "fully/partially funded (check details)"
+    #     if boilerplate in funding_raw:
+    #         funding_raw = funding_raw.replace(boilerplate, "").strip()
+            
+    #     context = self.expand_context(row).lower()
+        
+    #     result = {
+    #         'funding_category': 'Variable / Unspecified',
+    #         'funding_amount': None
+    #     }
+
+    #     # 1. Regex to extract monetary values 
+    #     money_pattern = r'(\$|€|£)\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+[kK])'
+    #     match = re.search(money_pattern, funding_raw + " " + context)
+        
+    #     if match:
+    #         result['funding_amount'] = "".join(match.groups())
+    #         result['funding_category'] = 'Fixed Grant'
+    #         return pd.Series(result)
+
+    #     # 2. Dictionary Matching 
+    #     combined_text = funding_raw + " " + context
+        
+       
+    #     for standard_cat, keywords in self.funding_taxonomy.items():
+    #         if any(kw in combined_text for kw in keywords):
+    #             result['funding_category'] = standard_cat
+                
+    #             return pd.Series(result)
+
+    #     return pd.Series(result)
     def process_funding(self, row):
         """
         Processes the funding column to extract category and monetary value if present.
         """
         funding_raw = str(row.get('funding_type', '')).lower()
+        
+        # 1. تنظيف البيانات الملوثة (Boilerplate Removal)
+        boilerplate = "fully/partially funded (check details)"
+        if boilerplate in funding_raw:
+            funding_raw = funding_raw.replace(boilerplate, "").strip()
+            
         context = self.expand_context(row).lower()
+        combined_text = funding_raw + " " + context
         
         result = {
             'funding_category': 'Variable / Unspecified',
             'funding_amount': None
         }
 
-        # 1. Regex to extract monetary values
-        money_pattern = r'(\$|€|£)\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+[kK])'
-        match = re.search(money_pattern, funding_raw + " " + context)
+        # 2. An advanced regular expression that captures currencies whether they appear before the number (e.g., €900) or after it (e.g., 900 euros).
+        # Supports: $, €, £, eur, usd, euro, euros
+        money_pattern = r'((?:\$|€|£|eur|usd)\s?\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d{1,3}(?:,\d{3})*(?:\.\d+)?\s?(?:€|eur|euros?|usd|\$))'
+        match = re.search(money_pattern, combined_text, re.IGNORECASE)
         
         if match:
-            result['funding_amount'] = "".join(match.groups())
+            # Extract the amount(e.g., "934 euros" or "€1200")
+            result['funding_amount'] = match.group(1).strip()
             result['funding_category'] = 'Fixed Grant'
             return pd.Series(result)
 
-        # 2. Dictionary Matching if no number is found
+        # 3. Expanded Dictionary Matching
         for standard_cat, keywords in self.funding_taxonomy.items():
-            if any(kw in funding_raw for kw in keywords) or any(kw in context for kw in keywords):
+            if any(kw in combined_text for kw in keywords):
                 result['funding_category'] = standard_cat
                 return pd.Series(result)
 
