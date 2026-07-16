@@ -72,44 +72,8 @@ class ScholarshipDataProcessor:
         ]
         return " ".join([p for p in context_parts if p.lower() not in ['nan', 'n/a', 'none']])
 
-    # def process_funding(self, row):
-    #     """
-    #     Processes the funding column to extract category and monetary value if present.
-    #     """
-    #     funding_raw = str(row.get('funding_type', '')).lower()
-        
 
-    #     boilerplate = "fully/partially funded (check details)"
-    #     if boilerplate in funding_raw:
-    #         funding_raw = funding_raw.replace(boilerplate, "").strip()
-            
-    #     context = self.expand_context(row).lower()
-        
-    #     result = {
-    #         'funding_category': 'Variable / Unspecified',
-    #         'funding_amount': None
-    #     }
 
-    #     # 1. Regex to extract monetary values 
-    #     money_pattern = r'(\$|€|£)\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+[kK])'
-    #     match = re.search(money_pattern, funding_raw + " " + context)
-        
-    #     if match:
-    #         result['funding_amount'] = "".join(match.groups())
-    #         result['funding_category'] = 'Fixed Grant'
-    #         return pd.Series(result)
-
-    #     # 2. Dictionary Matching 
-    #     combined_text = funding_raw + " " + context
-        
-       
-    #     for standard_cat, keywords in self.funding_taxonomy.items():
-    #         if any(kw in combined_text for kw in keywords):
-    #             result['funding_category'] = standard_cat
-                
-    #             return pd.Series(result)
-
-    #     return pd.Series(result)
     def process_funding(self, row):
         """
         Processes the funding column to extract category and monetary value if present.
@@ -190,29 +154,154 @@ class ScholarshipDataProcessor:
 
         return pd.Series(result)
 
-# ==========================================
-# Pipeline Usage Example
-# ==========================================
-if __name__ == "__main__":
-    # Simulated raw data
-    data = [{
-        'degree_level': 'Computer Science', 
-        'funding_type': 'Will receive $10,000 annually',
-        'description': 'This scholarship is for outstanding bachelor students in tech.',
-        'eligibility': 'Must maintain a 3.5 GPA.'
-    }]
-    df = pd.DataFrame(data)
+    def process_country(self, row):
+        """
+        Extracts host country and eligible nationality using explicit tags 
+        as the primary source of truth, falling back to NLP for unstructured data.
+        """
+        raw_country = str(row.get('country', '')).strip().lower()
+        context = self.expand_context(row)
+        
+        tags = row.get('tags', [])
+        if isinstance(tags, str):
+            tags = [t.strip(" '\"[]") for t in tags.split(',')]
+        elif not isinstance(tags, list):
+            tags = []
+            
+        tags_lower = [str(t).lower() for t in tags]
+        
+        result = {
+            'host_country': 'Unspecified',
+            'eligible_nationality': 'International / All'
+        }
+
+        # HIERARCHY LEVEL 1: Check Tags for exact Host Country
+        if 'germany' in tags_lower or 'daad' in tags_lower:
+            result['host_country'] = 'Germany'
+        elif 'college selection' in tags_lower or 'usa' in tags_lower or raw_country == 'usa':
+            result['host_country'] = 'USA'
+
+        # HIERARCHY LEVEL 1: Check Tags for Target Nationality
+        target_nationalities = ['egypt', 'syria', 'jordan', 'saudi arabia']
+        found_targets = set()
+        
+        for tn in target_nationalities:
+            if tn in tags_lower:
+                found_targets.add(tn.title())
+                
+        if found_targets:
+            result['eligible_nationality'] = ", ".join(sorted(list(found_targets)))
+            
+        # If both fields are filled via tags, bypass NLP entirely (Performance boost)
+        if result['host_country'] != 'Unspecified' and result['eligible_nationality'] != 'International / All':
+            return pd.Series(result)
+
+        # HIERARCHY LEVEL 2: NLP Contextual Extraction (Fallback for missing fields)
+        host_keywords = ['study in', 'travel to', 'universities in', 'located in', 'host', 'tenable in']
+        nat_keywords = ['citizens of', 'citizenship', 'open to', 'nationals of', 'from', 'passport']
+        
+        nlp_hosts = set()
+        nlp_nats = set()
+        
+        doc = self.nlp(context)
+        
+        for ent in doc.ents:
+            if ent.label_ in ["GPE", "LOC"]:
+                start_token = max(0, ent.start - 5)
+                preceding_text = doc[start_token:ent.start].text.lower()
+                
+                is_host = any(kw in preceding_text for kw in host_keywords)
+                is_nat = any(kw in preceding_text for kw in nat_keywords)
+                
+                if is_host and result['host_country'] == 'Unspecified':
+                    nlp_hosts.add(ent.text)
+                elif is_nat and not found_targets:
+                    nlp_nats.add(ent.text)
+
+        if nlp_hosts and result['host_country'] == 'Unspecified':
+            result['host_country'] = ", ".join(sorted(list(nlp_hosts)))
+            
+        if nlp_nats and result['eligible_nationality'] == 'International / All':
+            result['eligible_nationality'] = ", ".join(sorted(list(nlp_nats)))
+
+        return pd.Series(result)
     
-    # Initialize processor
-    processor = ScholarshipDataProcessor(use_zero_shot=False)
-    
-    # Apply processing to new columns
-    logging.info("Processing Funding...")
-    df[['funding_category', 'funding_amount']] = df.apply(processor.process_funding, axis=1)
-    
-    logging.info("Processing Degree Levels...")
-    df[['academic_major', 'academic_level']] = df.apply(processor.process_degree_level, axis=1)
-    
-    # Display results
-    print("\n--- Processed Data ---")
-    print(df[['academic_major', 'academic_level', 'funding_category', 'funding_amount']].to_string())
+
+
+
+
+
+
+
+
+
+
+
+
+# updated process_degree_level method with a more robust cascade approach, including explicit tag checks, rule-based NER, and optional zero-shot classification for fallback.
+# def process_degree_level(self, row):
+#         """
+#         Processes academic levels using a Hierarchy of Trust:
+#         1. Explicit Tags (Ground Truth)
+#         2. Rule-Based NER (spaCy)
+#         3. Zero-Shot Classification
+#         """
+#         raw_degree = str(row.get('degree_level', ''))
+#         context = self.expand_context(row)
+        
+#         # Safely handle the tags column (whether it's a list or string representation)
+#         tags = row.get('tags', [])
+#         if isinstance(tags, str):
+#             tags = [t.strip(" '\"[]") for t in tags.split(',')]
+#         elif not isinstance(tags, list):
+#             tags = []
+            
+#         tags_lower = [str(t).lower() for t in tags]
+        
+#         result = {
+#             'academic_major': 'All Disciplines',
+#             'academic_level': 'Unspecified'
+#         }
+
+#         # Relocate known majors if found in the degree field
+#         known_majors = ['Computer Science', 'Cybersecurity', 'Theology/Ministry', 'Web Design / Creative Arts']
+#         if any(major in raw_degree for major in known_majors):
+#             result['academic_major'] = raw_degree
+
+#         # HIERARCHY LEVEL 1: Structured Tags Overwrite
+#         # Map specific DAAD tag variations to our standard taxonomy
+#         tag_mapping = {
+#             'undergraduates': 'Undergraduates',
+#             'graduates': 'Graduates',
+#             'doctoral candidates/phd students': 'Doctoral/PhD',
+#             'doctoral/phd': 'Doctoral/PhD',
+#             'postdoctoral researchers': 'Doctoral/PhD'
+#         }
+        
+#         for tag in tags_lower:
+#             if tag in tag_mapping:
+#                 result['academic_level'] = tag_mapping[tag]
+#                 # Trust the tag completely and bypass NLP to prevent conflicts
+#                 return pd.Series(result)
+
+#         # HIERARCHY LEVEL 2: Rule-Based NER (spaCy)
+#         doc = self.nlp(context)
+#         matches = self.matcher(doc)
+        
+#         if matches:
+#             match_id, start, end = matches[0]
+#             rule_id = self.nlp.vocab.strings[match_id]
+#             result['academic_level'] = rule_id.replace("LEVEL_", "")
+#             return pd.Series(result)
+
+#         # HIERARCHY LEVEL 3: Zero-Shot Classification (Fallback)
+#         if self.use_zero_shot and result['academic_level'] == 'Unspecified':
+#             candidate_labels = list(self.level_taxonomy.keys())
+#             try:
+#                 clf_result = self.classifier(context[:1000], candidate_labels)
+#                 if clf_result['scores'][0] > 0.5:
+#                     result['academic_level'] = clf_result['labels'][0]
+#             except Exception as e:
+#                 logging.warning(f"Zero-shot failed: {e}")
+
+#         return pd.Series(result)
