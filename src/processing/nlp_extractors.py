@@ -111,48 +111,118 @@ class ScholarshipDataProcessor:
                 return pd.Series(result)
 
         return pd.Series(result)
+    # تأكدي من التاغ في حال فيه اي مشاكل رجعي لهي النسخة
+    # def process_degree_level(self, row):
+    #     """
+    #     Processes academic levels using a Cascade approach.
+    #     """
+    #     raw_degree = str(row.get('degree_level', ''))
+    #     context = self.expand_context(row)
+        
+    #     result = {
+    #         'academic_major': 'All Disciplines', # Default value
+    #         'academic_level': 'Unspecified'      # Default value
+    #     }
 
+    #     # Proactive processing: if the original field contains a major, relocate it
+    #     known_majors = ['Computer Science', 'Cybersecurity', 'Theology/Ministry', 'Web Design / Creative Arts']
+    #     if any(major in raw_degree for major in known_majors):
+    #         result['academic_major'] = raw_degree
+
+    #     # --- CASCADE STAGE 1: Rule-Based NER (spaCy) ---
+    #     doc = self.nlp(context)
+    #     matches = self.matcher(doc)
+        
+    #     if matches:
+    #         # Take the first identified standard category
+    #         match_id, start, end = matches[0]
+    #         rule_id = self.nlp.vocab.strings[match_id]
+    #         result['academic_level'] = rule_id.replace("LEVEL_", "")
+    #         return pd.Series(result)
+
+    #     # --- CASCADE STAGE 2: Zero-Shot Classification (Fallback) ---
+    #     if self.use_zero_shot and result['academic_level'] == 'Unspecified':
+    #         candidate_labels = list(self.level_taxonomy.keys())
+    #         try:
+    #             # Pass only the first 1000 characters to prevent memory overflow
+    #             clf_result = self.classifier(context[:1000], candidate_labels)
+    #             # If model confidence is above 50%
+    #             if clf_result['scores'][0] > 0.5:
+    #                 result['academic_level'] = clf_result['labels'][0]
+    #         except Exception as e:
+    #             logging.warning(f"Zero-shot failed: {e}")
+
+    #     return pd.Series(result)
+
+
+# updated process_degree_level method with a more robust cascade approach, including explicit tag checks, rule-based NER, and optional zero-shot classification for fallback.
     def process_degree_level(self, row):
         """
-        Processes academic levels using a Cascade approach.
+        Processes academic levels using a Hierarchy of Trust:
+        1. Explicit Tags (Ground Truth)
+        2. Rule-Based NER (spaCy)
+        3. Zero-Shot Classification
         """
         raw_degree = str(row.get('degree_level', ''))
         context = self.expand_context(row)
         
+        # Safely handle the tags column (whether it's a list or string representation)
+        tags = row.get('tags', [])
+        if isinstance(tags, str):
+            tags = [t.strip(" '\"[]") for t in tags.split(',')]
+        elif not isinstance(tags, list):
+            tags = []
+            
+        tags_lower = [str(t).lower() for t in tags]
+        
         result = {
-            'academic_major': 'All Disciplines', # Default value
-            'academic_level': 'Unspecified'      # Default value
+            'academic_major': 'All Disciplines',
+            'academic_level': 'Unspecified'
         }
 
-        # Proactive processing: if the original field contains a major, relocate it
+        # Relocate known majors if found in the degree field
         known_majors = ['Computer Science', 'Cybersecurity', 'Theology/Ministry', 'Web Design / Creative Arts']
         if any(major in raw_degree for major in known_majors):
             result['academic_major'] = raw_degree
 
-        # --- CASCADE STAGE 1: Rule-Based NER (spaCy) ---
+        # HIERARCHY LEVEL 1: Structured Tags Overwrite
+        # Map specific DAAD tag variations to our standard taxonomy
+        tag_mapping = {
+            'undergraduates': 'Undergraduates',
+            'graduates': 'Graduates',
+            'doctoral candidates/phd students': 'Doctoral/PhD',
+            'doctoral/phd': 'Doctoral/PhD',
+            'postdoctoral researchers': 'Doctoral/PhD'
+        }
+        
+        for tag in tags_lower:
+            if tag in tag_mapping:
+                result['academic_level'] = tag_mapping[tag]
+                # Trust the tag completely and bypass NLP to prevent conflicts
+                return pd.Series(result)
+
+        # HIERARCHY LEVEL 2: Rule-Based NER (spaCy)
         doc = self.nlp(context)
         matches = self.matcher(doc)
         
         if matches:
-            # Take the first identified standard category
             match_id, start, end = matches[0]
             rule_id = self.nlp.vocab.strings[match_id]
             result['academic_level'] = rule_id.replace("LEVEL_", "")
             return pd.Series(result)
 
-        # --- CASCADE STAGE 2: Zero-Shot Classification (Fallback) ---
+        # HIERARCHY LEVEL 3: Zero-Shot Classification (Fallback)
         if self.use_zero_shot and result['academic_level'] == 'Unspecified':
             candidate_labels = list(self.level_taxonomy.keys())
             try:
-                # Pass only the first 1000 characters to prevent memory overflow
                 clf_result = self.classifier(context[:1000], candidate_labels)
-                # If model confidence is above 50%
                 if clf_result['scores'][0] > 0.5:
                     result['academic_level'] = clf_result['labels'][0]
             except Exception as e:
                 logging.warning(f"Zero-shot failed: {e}")
 
         return pd.Series(result)
+    
 
     def process_country(self, row):
         """
@@ -238,70 +308,3 @@ class ScholarshipDataProcessor:
 
 
 
-# updated process_degree_level method with a more robust cascade approach, including explicit tag checks, rule-based NER, and optional zero-shot classification for fallback.
-# def process_degree_level(self, row):
-#         """
-#         Processes academic levels using a Hierarchy of Trust:
-#         1. Explicit Tags (Ground Truth)
-#         2. Rule-Based NER (spaCy)
-#         3. Zero-Shot Classification
-#         """
-#         raw_degree = str(row.get('degree_level', ''))
-#         context = self.expand_context(row)
-        
-#         # Safely handle the tags column (whether it's a list or string representation)
-#         tags = row.get('tags', [])
-#         if isinstance(tags, str):
-#             tags = [t.strip(" '\"[]") for t in tags.split(',')]
-#         elif not isinstance(tags, list):
-#             tags = []
-            
-#         tags_lower = [str(t).lower() for t in tags]
-        
-#         result = {
-#             'academic_major': 'All Disciplines',
-#             'academic_level': 'Unspecified'
-#         }
-
-#         # Relocate known majors if found in the degree field
-#         known_majors = ['Computer Science', 'Cybersecurity', 'Theology/Ministry', 'Web Design / Creative Arts']
-#         if any(major in raw_degree for major in known_majors):
-#             result['academic_major'] = raw_degree
-
-#         # HIERARCHY LEVEL 1: Structured Tags Overwrite
-#         # Map specific DAAD tag variations to our standard taxonomy
-#         tag_mapping = {
-#             'undergraduates': 'Undergraduates',
-#             'graduates': 'Graduates',
-#             'doctoral candidates/phd students': 'Doctoral/PhD',
-#             'doctoral/phd': 'Doctoral/PhD',
-#             'postdoctoral researchers': 'Doctoral/PhD'
-#         }
-        
-#         for tag in tags_lower:
-#             if tag in tag_mapping:
-#                 result['academic_level'] = tag_mapping[tag]
-#                 # Trust the tag completely and bypass NLP to prevent conflicts
-#                 return pd.Series(result)
-
-#         # HIERARCHY LEVEL 2: Rule-Based NER (spaCy)
-#         doc = self.nlp(context)
-#         matches = self.matcher(doc)
-        
-#         if matches:
-#             match_id, start, end = matches[0]
-#             rule_id = self.nlp.vocab.strings[match_id]
-#             result['academic_level'] = rule_id.replace("LEVEL_", "")
-#             return pd.Series(result)
-
-#         # HIERARCHY LEVEL 3: Zero-Shot Classification (Fallback)
-#         if self.use_zero_shot and result['academic_level'] == 'Unspecified':
-#             candidate_labels = list(self.level_taxonomy.keys())
-#             try:
-#                 clf_result = self.classifier(context[:1000], candidate_labels)
-#                 if clf_result['scores'][0] > 0.5:
-#                     result['academic_level'] = clf_result['labels'][0]
-#             except Exception as e:
-#                 logging.warning(f"Zero-shot failed: {e}")
-
-#         return pd.Series(result)
