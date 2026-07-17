@@ -43,7 +43,7 @@ def analyze_data_to_html(df):
         "</style>",
         "</head>",
         "<body>",
-        "<h1>📊 Comprehensive Data Profiling Report</h1>",
+        "<h1> Comprehensive Data Profiling Report</h1>",
         f"<div class='card'><h2>Overview</h2><p class='metric'><strong>Total Records:</strong> {len(df):,}</p><p class='metric'><strong>Total Features (Columns):</strong> {len(df.columns)}</p></div>"
     ]
 
@@ -59,15 +59,17 @@ def analyze_data_to_html(df):
         total_missing = missing_data[col] + empty_strings.get(col, 0) + na_strings.get(col, 0)
         percentage = (total_missing / len(df)) * 100
         
-        status = "✅ Healthy"
-        color_class = ""
-        if percentage > 50:
-            status = "❌ Critical (Drop/Impute)"
-            color_class = "class='warning'"
-        elif percentage > 20:
-            status = "⚠️ Warning (Needs attention)"
+        status = "Healthy"
+        color_style = "color: #27ae60; font-weight: bold;"
         
-        html.append(f"<tr><td><strong>{col}</strong></td><td>{total_missing:,}</td><td {color_class}>{percentage:.2f}%</td><td>{status}</td></tr>")
+        if percentage > 50:
+            status = "Critical (Drop/Impute)"
+            color_style = "color: #e74c3c; font-weight: bold;"
+        elif percentage > 20:
+            status = "Warning (Needs attention)"
+            color_style = "color: #f39c12; font-weight: bold;"
+        
+        html.append(f"<tr><td><strong>{col}</strong></td><td>{total_missing:,}</td><td>{percentage:.2f}%</td><td style='{color_style}'>{status}</td></tr>")
     html.append("</table>")
 
     exact_duplicates = df.duplicated(subset=['scholarship_name', 'application_link']).sum()
