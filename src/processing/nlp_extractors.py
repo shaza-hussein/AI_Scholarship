@@ -1,9 +1,21 @@
+import os
 import re
 import spacy
 from spacy.matcher import PhraseMatcher
 from transformers import pipeline
 import pandas as pd
 import logging
+import dateutil.parser as dparser
+
+import json
+import dateutil.parser as dparser
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -31,6 +43,17 @@ class ScholarshipDataProcessor:
         if self.use_zero_shot:
             logging.info("Loading Zero-Shot Classifier...")
             self.classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+        # Initialize Groq LLM Client for advanced extraction(deadline) 
+        self.api_key = os.environ.get("GROQ_API_KEY")
+        if self.api_key:
+            logging.info("Initializing LLM Client...")
+            self.llm_client = Groq(api_key=self.api_key)
+            self.llm_model = "llama-3.3-70b-versatile"
+            # self.llm_model = "llama-3.1-8b-instant"
+        else:
+            logging.warning("API key missing. LLM extraction disabled.")
+            self.llm_client = None
 
         # Taxonomy Standardization
         self.level_taxonomy = {
@@ -297,14 +320,63 @@ class ScholarshipDataProcessor:
         return pd.Series(result)
     
 
+    # deadline processing with hybrid approach: rule-based parsing + LLM fallback
+    def parse_exact_date(self, text):
+        try:
+            dt = dparser.parse(text, fuzzy=False)
+            return dt.strftime('%Y-%m-%d')
+        except Exception:
+            return None
 
+    def extract_via_llm(self, context_text):
+        if not self.llm_client:
+            return "Not Specified"
+            
+        prompt = f"""
+        Extract the application deadline from the text below.
+        If there are multiple dates, return ONLY the primary application submission deadline.
+        If no application deadline exists, return "Not Specified".
+        
+        Output strictly in valid JSON format: {{"deadline": "YYYY-MM-DD"}} or {{"deadline": "Not Specified"}}
+        
+        Text:
+        {context_text}
+        """
+        
+        try:
+            response = self.llm_client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You output only valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.llm_model,
+                temperature=0.0,
+                response_format={"type": "json_object"}
+            )
+            
+            content = response.choices[0].message.content
+            parsed_json = json.loads(content)
+            return parsed_json.get("deadline", "Not Specified")
+        except Exception as e:
+            logging.error(f"LLM Error: {e}")
+            return "Not Specified"
 
+    def process_deadline(self, row):
+        raw_deadline = str(row.get('deadline', '')).strip()
+        result = {'standardized_deadline': 'Not Specified'}
+        
+        useless_vals = ['not specified', 'varies', 'nan', 'none', 'rolling', 'continuous']
+        
+        if raw_deadline.lower() not in useless_vals and len(raw_deadline) < 30:
+            parsed = self.parse_exact_date(raw_deadline)
+            if parsed:
+                result['standardized_deadline'] = parsed
+                return pd.Series(result)
 
-
-
-
-
-
-
-
-
+        context = self.expand_context(row)
+        combined_text = f"Raw Deadline: {raw_deadline} | Context: {context}"
+        
+        llm_result = self.extract_via_llm(combined_text[:1000])  # Limit to first 1000 chars for LLM
+        result['standardized_deadline'] = llm_result
+        
+        return pd.Series(result)

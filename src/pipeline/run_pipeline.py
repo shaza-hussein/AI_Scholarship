@@ -54,17 +54,26 @@ def main():
     processor = ScholarshipDataProcessor(use_zero_shot=False)
 
     # Apply processing functions
+
+    # funding
     tqdm.pandas(desc="Processing Funding")
     logging.info("Extracting Funding Categories and Amounts...")
     df_raw[['funding_category', 'funding_amount']] = df_raw.progress_apply(processor.process_funding, axis=1)
 
+    # degree_level
     tqdm.pandas(desc="Processing Degrees")
     logging.info("Extracting Academic Levels and Majors...")
     df_raw[['academic_major', 'academic_level']] = df_raw.progress_apply(processor.process_degree_level, axis=1)
 
+    # country
     tqdm.pandas(desc="Processing Countries")
     logging.info("Extracting Host Countries and Eligible Nationalities...")
     df_raw[['host_country', 'eligible_nationality']] = df_raw.progress_apply(processor.process_country, axis=1)
+
+    # deadline
+    tqdm.pandas(desc="Processing Deadlines")
+    logging.info("Extracting Deadlines via Hybrid NLP-LLM Engine...")
+    df_raw['standardized_deadline'] = df_raw.progress_apply(processor.process_deadline, axis=1)
 
     # Save processed data
     output_file_json = os.path.join(PROCESSED_DATA_DIR, 'master_scholarships_clean.json')
