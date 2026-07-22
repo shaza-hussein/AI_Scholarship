@@ -73,7 +73,7 @@ def main():
     # deadline
     tqdm.pandas(desc="Processing Deadlines")
     logging.info("Extracting Deadlines via Hybrid NLP-LLM Engine...")
-    df_raw['standardized_deadline'] = df_raw.progress_apply(processor.process_deadline, axis=1)
+    df_raw['standardized_deadline'] = df_raw.progress_apply(processor.process_deadline, axis=1)['standardized_deadline']
 
     # Save processed data
     output_file_json = os.path.join(PROCESSED_DATA_DIR, 'master_scholarships_clean.json')

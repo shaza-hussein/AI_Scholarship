@@ -6,6 +6,7 @@ from transformers import pipeline
 import pandas as pd
 import logging
 import dateutil.parser as dparser
+import ollama
 
 import json
 import dateutil.parser as dparser
@@ -329,54 +330,98 @@ class ScholarshipDataProcessor:
             return None
 
     def extract_via_llm(self, context_text):
-        if not self.llm_client:
-            return "Not Specified"
-            
-        prompt = f"""
-        Extract the application deadline from the text below.
-        If there are multiple dates, return ONLY the primary application submission deadline.
-        If no application deadline exists, return "Not Specified".
+        """
+        Extracts the application deadline strictly in YYYY-MM-DD format
+        using a local LLM via Ollama to ensure infinite free scalability.
+        """
         
+        
+        prompt = f"""
+        Extract the application submission deadline from the text below.
+        
+        CRITICAL RULES:
+        1. Find ONLY the application submission deadline.
+        2. IGNORE all other dates (e.g., funding starts, selection decisions, program start dates, research stays).
+        3. You must format the output exactly as YYYY-MM-DD.
+        4. If there is no specific application deadline mentioned, you must output "Not Specified".
+         
         Output strictly in valid JSON format: {{"deadline": "YYYY-MM-DD"}} or {{"deadline": "Not Specified"}}
         
-        Text:
+        Text to process:
         {context_text}
         """
         
         try:
-            response = self.llm_client.chat.completions.create(
+            response = ollama.chat(
+                model='qwen2.5:7b',
                 messages=[
                     {"role": "system", "content": "You output only valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                model=self.llm_model,
-                temperature=0.0,
-                response_format={"type": "json_object"}
+                options={"temperature": 0.0}
             )
             
-            content = response.choices[0].message.content
-            parsed_json = json.loads(content)
+            content = response['message']['content']
+            
+            # Clean up potential markdown formatting in local LLM outputs
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+                
+            parsed_json = json.loads(content.strip())
             return parsed_json.get("deadline", "Not Specified")
         except Exception as e:
-            logging.error(f"LLM Error: {e}")
+            logging.error(f"Local LLM Error: {e}")
             return "Not Specified"
+
 
     def process_deadline(self, row):
         raw_deadline = str(row.get('deadline', '')).strip()
         result = {'standardized_deadline': 'Not Specified'}
         
         useless_vals = ['not specified', 'varies', 'nan', 'none', 'rolling', 'continuous']
+        is_useless = raw_deadline.lower() in useless_vals
         
-        if raw_deadline.lower() not in useless_vals and len(raw_deadline) < 30:
+       
+        if not is_useless and len(raw_deadline) < 30:
             parsed = self.parse_exact_date(raw_deadline)
             if parsed:
                 result['standardized_deadline'] = parsed
                 return pd.Series(result)
 
+       
         context = self.expand_context(row)
-        combined_text = f"Raw Deadline: {raw_deadline} | Context: {context}"
         
-        llm_result = self.extract_via_llm(combined_text[:1000])  # Limit to first 1000 chars for LLM
+
+        if is_useless:
+            combined_text = f"Scholarship Details: {context}"
+        else:
+            combined_text = f"Extracted Text: {raw_deadline} | Scholarship Details: {context}"
+        
+
+        llm_result = self.extract_via_llm(combined_text[:8000])
         result['standardized_deadline'] = llm_result
         
         return pd.Series(result)
+
+
+    # def process_deadline(self, row):
+    #     raw_deadline = str(row.get('deadline', '')).strip()
+    #     result = {'standardized_deadline': 'Not Specified'}
+        
+    #     useless_vals = ['not specified', 'varies', 'nan', 'none', 'rolling', 'continuous']
+        
+    #     if raw_deadline.lower() not in useless_vals and len(raw_deadline) < 30:
+    #         parsed = self.parse_exact_date(raw_deadline)
+    #         if parsed:
+    #             result['standardized_deadline'] = parsed
+    #             return pd.Series(result)
+
+    #     context = self.expand_context(row)
+    #     combined_text = f"Raw Deadline: {raw_deadline} | Context: {context}"
+        
+    #     llm_result = self.extract_via_llm(combined_text[:1000])  # Limit to first 1000 chars for LLM
+    #     result['standardized_deadline'] = llm_result
+        
+    #     return pd.Series(result)
