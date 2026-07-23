@@ -4,6 +4,7 @@ import glob
 import logging
 import pandas as pd
 from tqdm import tqdm
+from src.processing.rag_formatter import RagDocumentBuilder
 
 # Add project root directory to sys.path to ensure correct module imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -78,6 +79,29 @@ def main():
     tqdm.pandas(desc="Processing Deadlines")
     logging.info("Extracting Deadlines via Hybrid NLP-LLM Engine...")
     df_raw['standardized_deadline'] = df_raw.progress_apply(processor.process_deadline, axis=1)['standardized_deadline']
+
+    # application_process
+    tqdm.pandas(desc="Processing Application Process")
+    logging.info("Cleaning textual columns and applying safe fallbacks...")
+    df_raw['application_process'] = df_raw['application_process'].fillna('').astype(str).str.strip()
+    
+    useless_vals = ['nan', 'none', 'n/a', 'not specified', 'tba', '']
+    fallback_message = "Please visit the official scholarship website for detailed application instructions and requirements."
+    
+    missing_condition = (
+        df_raw['application_process'].str.lower().isin(useless_vals) | 
+        (df_raw['application_process'].str.split().str.len() < 10)
+    )
+    df_raw.loc[missing_condition, 'application_process'] = fallback_message
+
+
+    # RAG Document Formatting
+    logging.info("Building Semantic Documents for RAG...")
+    
+    rag_builder = RagDocumentBuilder()
+    df_raw['rag_document'] = df_raw.apply(rag_builder.build_document, axis=1)
+    df_raw['rag_metadata'] = df_raw.apply(rag_builder.build_metadata, axis=1)
+
 
     # Save processed data
     output_file_json = os.path.join(PROCESSED_DATA_DIR, 'master_scholarships_clean.json')
