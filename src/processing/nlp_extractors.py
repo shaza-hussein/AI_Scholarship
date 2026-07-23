@@ -181,16 +181,9 @@ class ScholarshipDataProcessor:
 
 # updated process_degree_level method with a more robust cascade approach, including explicit tag checks, rule-based NER, and optional zero-shot classification for fallback.
     def process_degree_level(self, row):
-        """
-        Processes academic levels using a Hierarchy of Trust:
-        1. Explicit Tags (Ground Truth)
-        2. Rule-Based NER (spaCy)
-        3. Zero-Shot Classification
-        """
         raw_degree = str(row.get('degree_level', ''))
         context = self.expand_context(row)
         
-        # Safely handle the tags column (whether it's a list or string representation)
         tags = row.get('tags', [])
         if isinstance(tags, str):
             tags = [t.strip(" '\"[]") for t in tags.split(',')]
@@ -199,18 +192,8 @@ class ScholarshipDataProcessor:
             
         tags_lower = [str(t).lower() for t in tags]
         
-        result = {
-            'academic_major': 'All Disciplines',
-            'academic_level': 'Unspecified'
-        }
+        result = {'academic_level': 'Unspecified'}
 
-        # Relocate known majors if found in the degree field
-        known_majors = ['Computer Science', 'Cybersecurity', 'Theology/Ministry', 'Web Design / Creative Arts']
-        if any(major in raw_degree for major in known_majors):
-            result['academic_major'] = raw_degree
-
-        # HIERARCHY LEVEL 1: Structured Tags Overwrite
-        # Map specific DAAD tag variations to our standard taxonomy
         tag_mapping = {
             'undergraduates': 'Undergraduates',
             'graduates': 'Graduates',
@@ -222,10 +205,8 @@ class ScholarshipDataProcessor:
         for tag in tags_lower:
             if tag in tag_mapping:
                 result['academic_level'] = tag_mapping[tag]
-                # Trust the tag completely and bypass NLP to prevent conflicts
                 return pd.Series(result)
 
-        # HIERARCHY LEVEL 2: Rule-Based NER (spaCy)
         doc = self.nlp(context)
         matches = self.matcher(doc)
         
@@ -235,7 +216,6 @@ class ScholarshipDataProcessor:
             result['academic_level'] = rule_id.replace("LEVEL_", "")
             return pd.Series(result)
 
-        # HIERARCHY LEVEL 3: Zero-Shot Classification (Fallback)
         if self.use_zero_shot and result['academic_level'] == 'Unspecified':
             candidate_labels = list(self.level_taxonomy.keys())
             try:
@@ -248,6 +228,60 @@ class ScholarshipDataProcessor:
         return pd.Series(result)
     
 
+    def process_academic_major(self, row):
+        import json
+        import ollama
+        
+        raw_degree = str(row.get('degree_level', '')).strip()
+        context = self.expand_context(row)
+        
+        combined_text = f"Raw Value: {raw_degree} | Details: {context[:4000]}"
+        
+        prompt = f"""
+        Extract the academic major or field of study required for this scholarship.
+        
+        RULES:
+        1. If the scholarship targets specific fields (e.g., Computer Science, Engineering, Medicine), extract them as a comma-separated string.
+        2. If the text explicitly states it is open to all subjects/fields, return "All Disciplines".
+        3. If no specific field is mentioned at all, return "Unspecified".
+        4. Do NOT include degree levels like Bachelor, Master, or PhD in the output.
+        
+        Output STRICTLY in valid JSON format: {{"academic_major": "extracted fields"}}
+        
+        Text to process:
+        {combined_text}
+        """
+        
+        try:
+            response = ollama.chat(
+                model='qwen2.5:7b',
+                messages=[
+                    {"role": "system", "content": "You output only valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                options={"temperature": 0.0}
+            )
+            
+            content = response['message']['content']
+            
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+                
+            parsed_json = json.loads(content.strip())
+            major = parsed_json.get("academic_major", "Unspecified")
+            
+            return pd.Series({'academic_major': major})
+            
+        except Exception as e:
+            logging.error(f"Major Extraction Error: {e}")
+            return pd.Series({'academic_major': 'Unspecified'})
+
+
+
+
+    # process country
     def process_country(self, row):
         """
         Extracts host country and eligible nationality using explicit tags 

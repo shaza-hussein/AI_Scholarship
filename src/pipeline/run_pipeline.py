@@ -61,9 +61,13 @@ def main():
     df_raw[['funding_category', 'funding_amount']] = df_raw.progress_apply(processor.process_funding, axis=1)
 
     # degree_level
-    tqdm.pandas(desc="Processing Degrees")
-    logging.info("Extracting Academic Levels and Majors...")
-    df_raw[['academic_major', 'academic_level']] = df_raw.progress_apply(processor.process_degree_level, axis=1)
+    tqdm.pandas(desc="Processing Academic Levels")
+    logging.info("Extracting Academic Levels...")
+    df_raw['academic_level'] = df_raw.progress_apply(processor.process_degree_level, axis=1)['academic_level']
+
+    tqdm.pandas(desc="Processing Academic Majors")
+    logging.info("Extracting Academic Majors via LLM...")
+    df_raw['academic_major'] = df_raw.progress_apply(processor.process_academic_major, axis=1)['academic_major']
 
     # country
     tqdm.pandas(desc="Processing Countries")
