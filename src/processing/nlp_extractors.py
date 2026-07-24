@@ -104,7 +104,7 @@ class ScholarshipDataProcessor:
         """
         funding_raw = str(row.get('funding_type', '')).lower()
         
-        # 1. تنظيف البيانات الملوثة (Boilerplate Removal)
+        
         boilerplate = "fully/partially funded (check details)"
         if boilerplate in funding_raw:
             funding_raw = funding_raw.replace(boilerplate, "").strip()
@@ -135,48 +135,6 @@ class ScholarshipDataProcessor:
                 return pd.Series(result)
 
         return pd.Series(result)
-    # تأكدي من التاغ في حال فيه اي مشاكل رجعي لهي النسخة
-    # def process_degree_level(self, row):
-    #     """
-    #     Processes academic levels using a Cascade approach.
-    #     """
-    #     raw_degree = str(row.get('degree_level', ''))
-    #     context = self.expand_context(row)
-        
-    #     result = {
-    #         'academic_major': 'All Disciplines', # Default value
-    #         'academic_level': 'Unspecified'      # Default value
-    #     }
-
-    #     # Proactive processing: if the original field contains a major, relocate it
-    #     known_majors = ['Computer Science', 'Cybersecurity', 'Theology/Ministry', 'Web Design / Creative Arts']
-    #     if any(major in raw_degree for major in known_majors):
-    #         result['academic_major'] = raw_degree
-
-    #     # --- CASCADE STAGE 1: Rule-Based NER (spaCy) ---
-    #     doc = self.nlp(context)
-    #     matches = self.matcher(doc)
-        
-    #     if matches:
-    #         # Take the first identified standard category
-    #         match_id, start, end = matches[0]
-    #         rule_id = self.nlp.vocab.strings[match_id]
-    #         result['academic_level'] = rule_id.replace("LEVEL_", "")
-    #         return pd.Series(result)
-
-    #     # --- CASCADE STAGE 2: Zero-Shot Classification (Fallback) ---
-    #     if self.use_zero_shot and result['academic_level'] == 'Unspecified':
-    #         candidate_labels = list(self.level_taxonomy.keys())
-    #         try:
-    #             # Pass only the first 1000 characters to prevent memory overflow
-    #             clf_result = self.classifier(context[:1000], candidate_labels)
-    #             # If model confidence is above 50%
-    #             if clf_result['scores'][0] > 0.5:
-    #                 result['academic_level'] = clf_result['labels'][0]
-    #         except Exception as e:
-    #             logging.warning(f"Zero-shot failed: {e}")
-
-    #     return pd.Series(result)
 
 
 # updated process_degree_level method with a more robust cascade approach, including explicit tag checks, rule-based NER, and optional zero-shot classification for fallback.
@@ -439,23 +397,3 @@ class ScholarshipDataProcessor:
         
         return pd.Series(result)
 
-
-    # def process_deadline(self, row):
-    #     raw_deadline = str(row.get('deadline', '')).strip()
-    #     result = {'standardized_deadline': 'Not Specified'}
-        
-    #     useless_vals = ['not specified', 'varies', 'nan', 'none', 'rolling', 'continuous']
-        
-    #     if raw_deadline.lower() not in useless_vals and len(raw_deadline) < 30:
-    #         parsed = self.parse_exact_date(raw_deadline)
-    #         if parsed:
-    #             result['standardized_deadline'] = parsed
-    #             return pd.Series(result)
-
-    #     context = self.expand_context(row)
-    #     combined_text = f"Raw Deadline: {raw_deadline} | Context: {context}"
-        
-    #     llm_result = self.extract_via_llm(combined_text[:1000])  # Limit to first 1000 chars for LLM
-    #     result['standardized_deadline'] = llm_result
-        
-    #     return pd.Series(result)

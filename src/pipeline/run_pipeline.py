@@ -24,7 +24,7 @@ def main():
     # Define directory paths
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
     RAW_DATA_DIR = os.path.join(BASE_DIR, 'data_Json')
-    PROCESSED_DATA_DIR = os.path.join(BASE_DIR, 'data', 'processed')
+    PROCESSED_DATA_DIR = os.path.join(BASE_DIR, 'data_Json', 'processed')
     
     # Create output directory if it does not exist
     os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
@@ -96,7 +96,8 @@ def main():
 
 
     # RAG Document Formatting
-    logging.info("Building Semantic Documents for RAG...")
+    tqdm.pandas(desc="Processing Textual Columns")
+    logging.info("Building Semantic Documents & Metadata for RAG...")
     
     rag_builder = RagDocumentBuilder()
     df_raw['rag_document'] = df_raw.apply(rag_builder.build_document, axis=1)
