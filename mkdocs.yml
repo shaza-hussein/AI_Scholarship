@@ -10,4 +10,6 @@ plugins:
 
 nav:
   - Home: index.md
-  - NLP Processors: nlp_docs.md
+  - NLP Extractors: nlp_docs.md
+  - RAG Formatter: rag_formatter_docs.md
+  - ETL Pipeline: pipeline_docs.md
