@@ -13,3 +13,4 @@ nav:
   - NLP Extractors: nlp_docs.md
   - RAG Formatter: rag_formatter_docs.md
   - ETL Pipeline: pipeline_docs.md
+  - Hybrid Chunker: document_chunker_docs.md
