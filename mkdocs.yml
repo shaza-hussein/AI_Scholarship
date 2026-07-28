@@ -14,3 +14,5 @@ nav:
   - RAG Formatter: rag_formatter_docs.md
   - ETL Pipeline: pipeline_docs.md
   - Hybrid Chunker: document_chunker_docs.md
+  - RAG Pipeline: rag_pipeline.md
+  - Database Verification: verify_db.md

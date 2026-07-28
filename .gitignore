@@ -91,3 +91,10 @@ pip-wheel-metadata/
 !.vscode/settings.json
 !.vscode/extensions.json
 !.vscode/launch.json
+
+
+# Databases and Vector Stores
+db/
+*.duckdb
+*.duckdb.wal
+chroma_db/
