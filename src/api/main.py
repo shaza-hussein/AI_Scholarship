@@ -1,0 +1,36 @@
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from src.api.dependencies import init_ai_engines
+
+# Lifespan event to manage resources on startup and shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("="*60)
+    print(" Starting ScholarAI API Server...")
+    print(" Initializing heavy AI models (this takes ~15 seconds)...")
+    print("="*60)
+    
+    # Load models into RAM
+    init_ai_engines()
+    
+    yield # The server is now running and accepting requests
+    
+    # Cleanup on shutdown (if needed)
+    print("\n Shutting down ScholarAI API Server...")
+
+# Initialize the FastAPI App
+app = FastAPI(
+    title="ScholarAI API",
+    description="Backend API for the AI Scholarship System",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# 1. Health Check Endpoint
+@app.get("/health", tags=["System"])
+def health_check():
+    """Simple endpoint to verify the server and AI engines are running."""
+    return {
+        "status": "healthy",
+        "message": "ScholarAI Engine is up and running!"
+    }
