@@ -17,7 +17,7 @@ from src.rag.retriever import ScholarshipRetriever
 
 def run_tests():
     print("="*60)
-    print("🚀 Initializing Test Suite for Hybrid Retriever")
+    print("Initializing Test Suite for Hybrid Retriever")
     print("="*60)
     
     # Initialize the retriever once for all tests
@@ -63,7 +63,7 @@ def run_tests():
     # Execute Tests
     for case in test_cases:
         print(f"\n{'='*60}")
-        print(f"🧪 {case['test_name']}")
+        print(f"{case['test_name']}")
         print(f"Profile: {case['profile'].academic_level} in {case['profile'].academic_major} from {case['profile'].nationality}")
         print(f"{'-'*60}")
         
