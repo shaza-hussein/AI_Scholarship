@@ -10,9 +10,25 @@ plugins:
 
 nav:
   - Home: index.md
-  - NLP Extractors: nlp_docs.md
-  - RAG Formatter: rag_formatter_docs.md
-  - ETL Pipeline: pipeline_docs.md
-  - Hybrid Chunker: document_chunker_docs.md
-  - RAG Pipeline: rag_pipeline.md
-  - Database Verification: verify_db.md
+  - Data Processing Pipeline:
+    - NLP Extractors: nlp_docs.md
+    - Hybrid Chunker: document_chunker_docs.md
+    - RAG Formatter: rag_formatter_docs.md
+    - ETL Pipeline: pipeline_docs.md
+    - RAG Pipeline: rag_pipeline.md
+  - Core AI Engine:
+    - Student Schema: student_schema.md
+    - Hybrid Retriever: hybrid_retriever.md
+    - AI Generator: generator.md
+  - Testing & Validation:
+    - Database Verification: verify_db.md
+    - Retriever Tests: test_retriever.md
+    - Generator Tests: test_generator.md
+# nav:
+#   - Home: index.md
+#   - NLP Extractors: nlp_docs.md
+#   - RAG Formatter: rag_formatter_docs.md
+#   - ETL Pipeline: pipeline_docs.md
+#   - Hybrid Chunker: document_chunker_docs.md
+#   - RAG Pipeline: rag_pipeline.md
+#   - Database Verification: verify_db.md

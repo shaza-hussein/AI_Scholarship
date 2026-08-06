@@ -16,13 +16,13 @@ from src.rag.generator import ScholarshipGenerator
 
 def run_comprehensive_test():
     print("=" * 80)
-    print("🚀 Initializing Comprehensive End-to-End System Test")
+    print("Initializing Comprehensive End-to-End System Test")
     print("=" * 80)
     
     start_init = time.time()
     retriever = ScholarshipRetriever()
     generator = ScholarshipGenerator()
-    print(f"\n✅ System Initialized in {time.time() - start_init:.2f} seconds.\n")
+    print(f"\n System Initialized in {time.time() - start_init:.2f} seconds.\n")
 
     # Mock Profile (Egyptian student, Bachelor in Business)
     profile = StudentProfile(
@@ -33,15 +33,15 @@ def run_comprehensive_test():
         research_interests="Digital Marketing and Leadership"
     )
     
-    print("🔍 Step 1: Retrieving context for the student profile...")
+    print(" Step 1: Retrieving context for the student profile...")
     # Retrieve documents only once to save processing time
     docs = retriever.match_scholarships(profile, top_k=2)
     
     if not docs:
-        print("❌ No matching scholarships found. Cannot proceed with generation tests.")
+        print(" No matching scholarships found. Cannot proceed with generation tests.")
         return
 
-    print(f"✅ Found {len(docs)} matching scholarships. Proceeding to Generation Layer...\n")
+    print(f" Found {len(docs)} matching scholarships. Proceeding to Generation Layer...\n")
 
     # Define the test queries targeting different intents (English)
     test_queries = [
@@ -62,18 +62,18 @@ def run_comprehensive_test():
     # Step 2: Generation Testing Loop
     for i, test in enumerate(test_queries, 1):
         print("=" * 80)
-        print(f"🧪 Test Case {i}: {test['intent']}")
-        print(f"👤 User Query: {test['query']}")
+        print(f" Test Case {i}: {test['intent']}")
+        print(f" User Query: {test['query']}")
         print("=" * 80)
         
         start_gen = time.time()
         response = generator.generate_response(profile, docs, test['query'])
         
-        print("\n✨ AI ASSISTANT RESPONSE ✨")
+        print("\n AI ASSISTANT RESPONSE ✨")
         print("-" * 80)
         print(response)
         print("-" * 80)
-        print(f"⏱️ Generation Time: {time.time() - start_gen:.2f} seconds.\n")
+        print(f"Generation Time: {time.time() - start_gen:.2f} seconds.\n")
 
 if __name__ == "__main__":
     run_comprehensive_test()
