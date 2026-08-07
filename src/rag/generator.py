@@ -151,3 +151,52 @@ Application Process:
         # Call the LLM
         response = self.llm.invoke(prompt_val)
         return response.content
+
+    # cv analysing
+    def parse_cv_text(self, cv_text: str) -> dict:
+        """
+        Analyzes CV text using LLM and returns a structured profile dictionary.
+        Enforces strict JSON formatting and fallback values.
+        """
+        system_prompt = """
+        You are an expert data extractor and academic evaluator.
+        Analyze the provided CV text and extract specific academic details.
+        
+        CRITICAL INSTRUCTIONS:
+        1. Output ONLY a valid, strictly formatted JSON object. 
+        2. Do NOT include any preambles, explanations, or markdown blocks (e.g., do not use ```json).
+        3. Do NOT invent data. If a specific detail is not found in the text, use the specified default values.
+        
+        REQUIRED JSON STRUCTURE & DEFAULTS:
+        {
+            "nationality": "String (Extract the country. If not found, output 'Unknown')",
+            "academic_level": "String (e.g., 'Bachelor', 'Master', 'PhD'. If not found, output 'Unknown')",
+            "academic_major": "String (Extract the specific academic major. If not found, output 'Unknown')",
+            "gpa": Float (Extract the GPA and STRICTLY CONVERT IT to a standard 4.0 scale. E.g., if it is 78.3%, convert it to 3.1. If it is 4.5 out of 5, convert to 3.6. The final output MUST be <= 4.0. If not found, output 0.0),
+            "research_interests": "String (A concise summary of technical skills or research focus. If not found, output null)"
+        }
+        """
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"CV TEXT TO ANALYZE:\n{cv_text}"}
+        ]
+        
+        try:
+            response = self.llm.invoke(messages)
+            
+            raw_json_str = response.content.replace("```json", "").replace("```", "").strip()
+            
+            import json
+            profile_data = json.loads(raw_json_str)
+            return profile_data
+            
+        except Exception as e:
+            print(f"Error in CV parsing: {e}")
+            return {
+                "nationality": "Unknown",
+                "academic_level": "Bachelor",
+                "academic_major": "Unknown",
+                "gpa": 0.0,
+                "research_interests": ""
+            }

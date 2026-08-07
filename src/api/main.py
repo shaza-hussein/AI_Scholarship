@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from src.api.dependencies import init_ai_engines
-from src.api.routes import search
+from src.api.routes import search, cv
 
 # Lifespan event to manage resources on startup and shutdown
 @asynccontextmanager
@@ -28,7 +28,7 @@ app = FastAPI(
 )
 
 app.include_router(search.router)
-
+app.include_router(cv.router)
 # 1. Health Check Endpoint
 @app.get("/health", tags=["System"])
 def health_check():
