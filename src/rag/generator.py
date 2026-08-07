@@ -29,10 +29,10 @@ class ScholarshipGenerator:
         logging.info("Initializing Generation Layer (Groq Llama-3)...")
         self.duckdb_path = os.path.join(PROJECT_ROOT, "db", "analytical.duckdb")
         
-        # Ensure GROQ_API_KEY is in your environment variables
+       
         self.llm = ChatGroq(
-            model="llama-3.1-8b-instant", # Fast and powerful
-            temperature=0.2,        # Low temperature to prevent hallucination
+            model="llama-3.1-8b-instant", 
+            temperature=0.2,        
             max_tokens=1500
         )
         
@@ -200,3 +200,46 @@ Application Process:
                 "gpa": 0.0,
                 "research_interests": ""
             }
+
+    #  generate motivation letters
+    def generate_sop(self, profile_data: dict, scholarship_details: str, additional_notes: str = "", tone: str = "Professional", document_type: str = "Statement of Purpose") -> str:
+        """
+        Generates a highly tailored document by combining the student's profile 
+        with the specific scholarship requirements, matching the requested tone and type.
+        """
+        system_prompt = f"""
+        You are an elite academic admissions consultant and expert copywriter.
+        Your task is to write a highly compelling {document_type} for a scholarship application.
+        The overall tone of the text MUST be: {tone}.
+
+        CRITICAL WRITING RULES:
+        1. NO CLICHES: Never start with "My name is..." or "I am writing to apply for...". Start with a strong hook.
+        2. SHOW, DON'T TELL: Demonstrate how the student's background directly aligns with the scholarship's goals.
+        3. TAILORING: The letter MUST explicitly reference details from the "Scholarship Details". Explain WHY this specific program is the perfect fit.
+        4. FORMATTING BY TYPE: Strictly adapt the structure to the requested document type. If it is an "Email", you MUST include a clear Subject Line. If it is a formal "Letter", use appropriate academic formatting.
+        5. OUTPUT: Return ONLY the final letter text formatted in clean Markdown. Do not include any introductory remarks.
+        """
+
+        user_content = f"""
+        STUDENT PROFILE:
+        {profile_data}
+
+        SCHOLARSHIP DETAILS:
+        {scholarship_details}
+
+        ADDITIONAL NOTES (Key points to include):
+        {additional_notes}
+        """
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content}
+        ]
+
+        try:
+            response = self.llm.invoke(messages)
+            output_text = response.content.replace("```markdown", "").replace("```", "").strip()
+            return output_text
+        except Exception as e:
+            print(f"Error generating document: {e}")
+            raise ValueError(f"Failed to generate the {document_type}.")
