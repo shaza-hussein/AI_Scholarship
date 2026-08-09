@@ -32,7 +32,8 @@ class ScholarshipGenerator:
        
         self.llm = ChatGroq(
             model="llama-3.1-8b-instant", 
-            temperature=0.2,        
+            temperature=0.1,
+            # temperature=0.2,        
             max_tokens=1500
         )
         
@@ -218,6 +219,11 @@ Application Process:
         3. TAILORING: The letter MUST explicitly reference details from the "Scholarship Details". Explain WHY this specific program is the perfect fit.
         4. FORMATTING BY TYPE: Strictly adapt the structure to the requested document type. If it is an "Email", you MUST include a clear Subject Line. If it is a formal "Letter", use appropriate academic formatting.
         5. OUTPUT: Return ONLY the final letter text formatted in clean Markdown. Do not include any introductory remarks.
+        
+        CRITICAL GROUNDING RULES (ZERO HALLUCINATION):
+        - STRICT TRUTH: Use ONLY the provided student profile and scholarship details.
+        - NO EXTENSION: Do NOT fabricate past experiences, projects, awards, or personal backstory not explicitly mentioned in the profile.
+        - ADAPTIVITY: If a piece of information (like volunteer work) is missing, do not invent it. Focus on articulating the student's motivation using ONLY the available facts.
         """
 
         user_content = f"""
