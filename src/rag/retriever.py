@@ -135,12 +135,15 @@ class ScholarshipRetriever:
         sorted_docs = sorted(fused_scores.items(), key=lambda item: item[1], reverse=True)
         return [doc_map[doc_id] for doc_id, score in sorted_docs]
 
-    def match_scholarships(self, profile: StudentProfile, top_k: int = 5, fetch_k: int = 15) -> List[Any]:
+    def match_scholarships(self, profile: StudentProfile, query: str = "", top_k: int = 5, fetch_k: int = 15) -> List[Any]:
         valid_scholarships = self._deterministic_filter(profile)
         if not valid_scholarships:
             return []
             
-        search_query = self._formulate_query(profile)
+        if query and query.strip():
+            search_query = query
+        else:
+            search_query = self._formulate_query(profile)
         
         # --- 1. Dense Search (ChromaDB) ---
         search_filter = {"scholarship_name": {"$in": valid_scholarships}}
@@ -149,14 +152,12 @@ class ScholarshipRetriever:
         # --- 2. Sparse Search (BM25) ---
         sparse_results = []
         if self.bm25_retriever:
-            self.bm25_retriever.k = fetch_k * 3 # Fetch a wider net
+            self.bm25_retriever.k = fetch_k * 3
             raw_sparse = self.bm25_retriever.invoke(search_query)
-            # Post-filter BM25 results manually to respect DuckDB constraints
             sparse_results = [doc for doc in raw_sparse if doc.metadata.get('scholarship_name') in valid_scholarships][:fetch_k]
             
         # --- 3. RRF Fusion ---
         hybrid_results = self._rrf_fusion(dense_results, sparse_results)
-        # Limit to fetch_k for the Cross-Encoder to maintain speed
         hybrid_results = hybrid_results[:fetch_k]
         
         if not hybrid_results:
@@ -169,7 +170,6 @@ class ScholarshipRetriever:
         for doc, score in zip(hybrid_results, scores):
             doc.metadata['rerank_score'] = float(score)
             
-        # The Confidence Threshold implementation
         MIN_SCORE_THRESHOLD = 0.01
         valid_results = [doc for doc in hybrid_results if doc.metadata['rerank_score'] >= MIN_SCORE_THRESHOLD]
         
@@ -180,3 +180,51 @@ class ScholarshipRetriever:
             logging.warning("System retrieved candidates, but ALL failed the %.3f confidence threshold.", MIN_SCORE_THRESHOLD)
             
         return final_results
+
+
+
+    # def match_scholarships(self, profile: StudentProfile, top_k: int = 5, fetch_k: int = 15) -> List[Any]:
+    #     valid_scholarships = self._deterministic_filter(profile)
+    #     if not valid_scholarships:
+    #         return []
+            
+    #     search_query = self._formulate_query(profile)
+        
+    #     # --- 1. Dense Search (ChromaDB) ---
+    #     search_filter = {"scholarship_name": {"$in": valid_scholarships}}
+    #     dense_results = self.vector_store.similarity_search(query=search_query, k=fetch_k, filter=search_filter)
+        
+    #     # --- 2. Sparse Search (BM25) ---
+    #     sparse_results = []
+    #     if self.bm25_retriever:
+    #         self.bm25_retriever.k = fetch_k * 3 # Fetch a wider net
+    #         raw_sparse = self.bm25_retriever.invoke(search_query)
+    #         # Post-filter BM25 results manually to respect DuckDB constraints
+    #         sparse_results = [doc for doc in raw_sparse if doc.metadata.get('scholarship_name') in valid_scholarships][:fetch_k]
+            
+    #     # --- 3. RRF Fusion ---
+    #     hybrid_results = self._rrf_fusion(dense_results, sparse_results)
+    #     # Limit to fetch_k for the Cross-Encoder to maintain speed
+    #     hybrid_results = hybrid_results[:fetch_k]
+        
+    #     if not hybrid_results:
+    #         return []
+
+    #     # --- 4. Cross-Encoder Re-ranking & Confidence Threshold ---
+    #     pairs = [[search_query, doc.page_content] for doc in hybrid_results]
+    #     scores = self.reranker.predict(pairs)
+        
+    #     for doc, score in zip(hybrid_results, scores):
+    #         doc.metadata['rerank_score'] = float(score)
+            
+    #     # The Confidence Threshold implementation
+    #     MIN_SCORE_THRESHOLD = 0.01
+    #     valid_results = [doc for doc in hybrid_results if doc.metadata['rerank_score'] >= MIN_SCORE_THRESHOLD]
+        
+    #     valid_results.sort(key=lambda x: x.metadata['rerank_score'], reverse=True)
+    #     final_results = valid_results[:top_k]
+        
+    #     if not final_results:
+    #         logging.warning("System retrieved candidates, but ALL failed the %.3f confidence threshold.", MIN_SCORE_THRESHOLD)
+            
+    #     return final_results

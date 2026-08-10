@@ -1,41 +1,50 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from src.api.schemas import SearchRequest, SearchResponse, ScholarshipCardResponse
-from src.api.dependencies import get_retriever
+from src.api.dependencies import get_retriever, get_db
 from src.rag.retriever import ScholarshipRetriever
-from src.schemas.student import StudentProfile
+from src.schemas.student import StudentProfile as PydanticStudentProfile
+from src.database import crud
 
 router = APIRouter(prefix="/api/v1", tags=["Scholarships Search"])
 
 @router.post("/search", response_model=SearchResponse)
-def search_scholarships(payload: SearchRequest, retriever: ScholarshipRetriever = Depends(get_retriever)):
-    """
-    Endpoint to search scholarships using natural language and student profile constraints.
-    Feeds the frontend 'Search Scholarships' view.
-    """
+def search_scholarships(
+    payload: SearchRequest, 
+    retriever: ScholarshipRetriever = Depends(get_retriever),
+    db: Session = Depends(get_db)
+):
     try:
-        # 1. Construct Student Profile object
-        profile = StudentProfile(
-            nationality=payload.nationality,
-            academic_level=payload.academic_level,
-            academic_major=payload.academic_major,
-            gpa=payload.gpa,
-            research_interests=payload.research_interests
-        )
+        db_profile = crud.get_profile(db, payload.session_id)
         
-        # 2. Execute retrieval and re-ranking via hybrid retriever
-        docs = retriever.match_scholarships(profile, top_k=payload.top_k)
+        if db_profile:
+            profile = PydanticStudentProfile(
+                nationality=db_profile.nationality,
+                academic_level=db_profile.academic_level,
+                academic_major=db_profile.academic_major,
+                gpa=db_profile.gpa,
+                research_interests=db_profile.research_interests
+            )
+        else:
+            profile = PydanticStudentProfile(
+                nationality="Unknown",
+                academic_level="Unknown",
+                academic_major="Unknown",
+                gpa=0.0,
+                research_interests=""
+            )
+            
+        docs = retriever.match_scholarships(profile, query=payload.query, top_k=payload.top_k)
         
-# 3. Format results into cards matching the UI requirements
         cards = []
         for doc in docs:
             metadata = doc.metadata
-            # Calculate a clean percentage or use the score directly
-            raw_score = float(metadata.get("rerank_score", doc.score if hasattr(doc, 'score') else 0.90))
+            raw_score = float(metadata.get("rerank_score", getattr(doc, 'score', 0.90)))
             
             card = ScholarshipCardResponse(
                 title=metadata.get("scholarship_name", "Unknown Scholarship"),
                 country=metadata.get("host_country", "Not Specified"),
-                academic_level=metadata.get("academic_level", payload.academic_level),
+                academic_level=metadata.get("academic_level", profile.academic_level),
                 funding_type=metadata.get("funding_category", "Not Specified"),
                 description=doc.page_content[:200] + "...",
                 deadline=metadata.get("standardized_deadline", "Not Specified"),
