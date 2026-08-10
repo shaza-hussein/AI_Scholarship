@@ -3,6 +3,10 @@ from contextlib import asynccontextmanager
 from src.api.dependencies import init_ai_engines
 from src.api.routes import search, cv, sop
 
+from src.database.database import engine, Base
+from src.database import models
+
+
 # Lifespan event to manage resources on startup and shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,6 +22,8 @@ async def lifespan(app: FastAPI):
     
     # Cleanup on shutdown (if needed)
     print("\n Shutting down ScholarAI API Server...")
+
+models.Base.metadata.create_all(bind=engine)
 
 # Initialize the FastAPI App
 app = FastAPI(

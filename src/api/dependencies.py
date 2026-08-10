@@ -1,6 +1,7 @@
 import logging
 from src.rag.retriever import ScholarshipRetriever
 from src.rag.generator import ScholarshipGenerator
+from src.database.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -33,3 +34,11 @@ def get_generator() -> ScholarshipGenerator:
     if _generator_instance is None:
         raise RuntimeError("Generator engine is not initialized.")
     return _generator_instance
+
+# inialize database
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
