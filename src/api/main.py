@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from src.api.dependencies import init_ai_engines
-from src.api.routes import search, cv, sop
+from src.api.routes import search, cv, sop, chat
 
 from src.database.database import engine, Base
 from src.database import models
@@ -37,6 +37,7 @@ app = FastAPI(
 app.include_router(search.router)
 app.include_router(cv.router)
 app.include_router(sop.router)
+app.include_router(chat.router)
 
 # 1. Health Check Endpoint
 @app.get("/health", tags=["System"])

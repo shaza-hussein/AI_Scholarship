@@ -73,45 +73,41 @@ CRITICAL INSTRUCTIONS & RULES:
 Response:"""
         )
 
+
+
+
     def _enrich_and_format_context(self, docs: List[Document]) -> str:
         """
         Late Enrichment: Fetches the application_process from DuckDB 
-        and formats the final text with ChromaDB metadata.
+        and formats the final text with ChromaDB metadata using parameterized queries.
         """
         if not docs:
             return ""
 
-        # Extract scholarship names to fetch their application process from DuckDB
         scholarship_names = [doc.metadata.get('scholarship_name') for doc in docs]
-        
-        # Safely handle single quote issues in SQL
-        safe_names = [name.replace("'", "''") for name in scholarship_names if name]
-        names_tuple = tuple(safe_names)
+        valid_names = [name for name in scholarship_names if name]
         
         application_processes = {}
-        if names_tuple:
+        if valid_names:
             conn = duckdb.connect(self.duckdb_path)
             try:
-                # Handle tuple syntax for single element (e.g., ('Name',) -> ('Name'))
-                in_clause = str(names_tuple) if len(names_tuple) > 1 else f"('{names_tuple[0]}')"
+                placeholders = ", ".join(["?"] * len(valid_names))
                 
                 query = f"""
                     SELECT scholarship_name, application_process 
                     FROM scholarships 
-                    WHERE scholarship_name IN {in_clause}
+                    WHERE scholarship_name IN ({placeholders})
                 """
-                results = conn.execute(query).fetchall()
+                results = conn.execute(query, valid_names).fetchall()
                 application_processes = {row[0]: row[1] for row in results}
             finally:
                 conn.close()
 
-        # Format the rich context string
         formatted_blocks = []
         for doc in docs:
             meta = doc.metadata
             name = meta.get('scholarship_name', 'Unknown Scholarship')
             
-            # Construct a highly structured block for the LLM
             block = f"""
 ### Scholarship: {name}
 - Host Country: {meta.get('host_country', 'Not specified')}
@@ -129,6 +125,62 @@ Application Process:
             formatted_blocks.append(block)
 
         return "\n---\n".join(formatted_blocks)
+#     def _enrich_and_format_context(self, docs: List[Document]) -> str:
+#         """
+#         Late Enrichment: Fetches the application_process from DuckDB 
+#         and formats the final text with ChromaDB metadata.
+#         """
+#         if not docs:
+#             return ""
+
+#         # Extract scholarship names to fetch their application process from DuckDB
+#         scholarship_names = [doc.metadata.get('scholarship_name') for doc in docs]
+        
+#         # Safely handle single quote issues in SQL
+#         safe_names = [name.replace("'", "''") for name in scholarship_names if name]
+#         names_tuple = tuple(safe_names)
+        
+#         application_processes = {}
+#         if names_tuple:
+#             conn = duckdb.connect(self.duckdb_path)
+#             try:
+#                 # Handle tuple syntax for single element (e.g., ('Name',) -> ('Name'))
+#                 in_clause = str(names_tuple) if len(names_tuple) > 1 else f"('{names_tuple[0]}')"
+                
+#                 query = f"""
+#                     SELECT scholarship_name, application_process 
+#                     FROM scholarships 
+#                     WHERE scholarship_name IN {in_clause}
+#                 """
+#                 results = conn.execute(query).fetchall()
+#                 application_processes = {row[0]: row[1] for row in results}
+#             finally:
+#                 conn.close()
+
+#         # Format the rich context string
+#         formatted_blocks = []
+#         for doc in docs:
+#             meta = doc.metadata
+#             name = meta.get('scholarship_name', 'Unknown Scholarship')
+            
+#             # Construct a highly structured block for the LLM
+#             block = f"""
+# ### Scholarship: {name}
+# - Host Country: {meta.get('host_country', 'Not specified')}
+# - Funding Category: {meta.get('funding_category', 'Not specified')}
+# - Amount: {meta.get('funding_amount', 'Not specified')}
+# - Deadline: {meta.get('standardized_deadline', 'Not specified')}
+# - Link: {meta.get('application_link', 'No link provided')}
+
+# Description:
+# {doc.page_content}
+
+# Application Process:
+# {application_processes.get(name, 'No specific application steps provided.')}
+# """
+#             formatted_blocks.append(block)
+
+#         return "\n---\n".join(formatted_blocks)
 
     def generate_response(self, profile: StudentProfile, retrieved_docs: List[Document], user_query: str) -> str:
         """
@@ -249,3 +301,53 @@ Application Process:
         except Exception as e:
             print(f"Error generating document: {e}")
             raise ValueError(f"Failed to generate the {document_type}.")
+
+
+
+    def chat_orchestrator(self, profile_data: dict, chat_history: list, retrieved_docs: list, user_message: str, intent: str = None) -> str:
+        formatted_context = self._enrich_and_format_context(retrieved_docs)
+        
+        history_text = ""
+        for msg in chat_history:
+            history_text += f"{msg.role.capitalize()}: {msg.content}\n"
+
+        system_prompt = """
+        You are an elite Academic Scholarship Advisor. Assist the student clearly and concisely, utilizing the provided context and chat history.
+
+        CRITICAL RULES:
+        1. CONTEXT & MEMORY: Refer to the 'Chat History' for continuity. Base all factual claims, deadlines, and links STRICTLY on the 'Retrieved Scholarships Context'.
+        2. ZERO HALLUCINATION: If a deadline, link, or specific requirement is missing in the context, explicitly state that it is not provided. Do not guess.
+        3. SMART FILTERING (CRUCIAL): When explaining application steps or eligibility, you MUST filter the information based on the 'STUDENT PROFILE'. If the student is a 'Master' level, strictly ignore any requirements mentioned in the context meant for 'PhD' or 'Postdoc' applicants (e.g., dissertations, postdoctoral invitations).
+        4. INTENT HANDLING:
+           - 'compare': Generate a clean Markdown table comparing funding, deadlines, and levels of the mentioned scholarships.
+           - 'roadmap': Provide a step-by-step application timeline based ONLY on the 'Application Process' in the context, tailored to the student's level.
+           - 'explain': Bullet-point the specific eligibility criteria and required documents.
+        5. CONCISENESS: Keep general responses brief and impactful to avoid overwhelming the student. Use clean Markdown formatting.
+        6. LANGUAGE: Respond in the exact language used by the user in the 'CURRENT MESSAGE'.
+        """
+
+        user_content = f"""
+        STUDENT PROFILE:
+        {profile_data}
+        
+        CHAT HISTORY:
+        {history_text}
+        
+        RETRIEVED SCHOLARSHIPS CONTEXT:
+        {formatted_context}
+        
+        CURRENT MESSAGE:
+        {user_message}
+        """
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content}
+        ]
+
+        try:
+            response = self.llm.invoke(messages)
+            return response.content.strip()
+        except Exception as e:
+            logging.error(f"Error in chat orchestrator: {e}")
+            raise ValueError("Failed to generate chat response.")
