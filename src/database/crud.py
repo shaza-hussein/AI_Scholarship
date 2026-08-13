@@ -19,6 +19,12 @@ def create_or_update_profile(db: Session, session_id: str, profile_data: dict):
     profile.gpa = profile_data.get("gpa", profile.gpa)
     profile.research_interests = profile_data.get("research_interests", profile.research_interests)
     
+   
+    profile.target_countries = profile_data.get("target_countries", profile.target_countries)
+    profile.skills = profile_data.get("skills", profile.skills)
+    profile.age = profile_data.get("age", profile.age)
+
+    
     db.commit()
     db.refresh(profile)
     return profile

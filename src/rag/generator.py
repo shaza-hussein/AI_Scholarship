@@ -207,10 +207,6 @@ Application Process:
 
     # cv analysing
     def parse_cv_text(self, cv_text: str) -> dict:
-        """
-        Analyzes CV text using LLM and returns a structured profile dictionary.
-        Enforces strict JSON formatting and fallback values.
-        """
         system_prompt = """
         You are an expert data extractor and academic evaluator.
         Analyze the provided CV text and extract specific academic details.
@@ -225,8 +221,11 @@ Application Process:
             "nationality": "String (Extract the country. If not found, output 'Unknown')",
             "academic_level": "String (e.g., 'Bachelor', 'Master', 'PhD'. If not found, output 'Unknown')",
             "academic_major": "String (Extract the specific academic major. If not found, output 'Unknown')",
-            "gpa": Float (Extract the GPA and STRICTLY CONVERT IT to a standard 4.0 scale. E.g., if it is 78.3%, convert it to 3.1. If it is 4.5 out of 5, convert to 3.6. The final output MUST be <= 4.0. If not found, output 0.0),
-            "research_interests": "String (A concise summary of technical skills or research focus. If not found, output null)"
+            "gpa": Float (Extract the GPA and STRICTLY CONVERT IT to a standard 4.0 scale. If not found, output 0.0),
+            "research_interests": "String (A concise summary of technical skills or research focus. If not found, output null)",
+            "target_countries": ["String"] (Extract preferred countries for study if mentioned. If not found, output []),
+            "skills": ["String"] (Extract technical tools, programming languages, or soft skills. If not found, output []),
+            "age": Integer (Extract the applicant's age if explicitly mentioned. If not found, output null)
         }
         """
         
@@ -237,9 +236,7 @@ Application Process:
         
         try:
             response = self.llm.invoke(messages)
-            
             raw_json_str = response.content.replace("```json", "").replace("```", "").strip()
-            
             import json
             profile_data = json.loads(raw_json_str)
             return profile_data
@@ -251,7 +248,10 @@ Application Process:
                 "academic_level": "Bachelor",
                 "academic_major": "Unknown",
                 "gpa": 0.0,
-                "research_interests": ""
+                "research_interests": "",
+                "target_countries": [],
+                "skills": [],
+                "age": None
             }
 
     #  generate motivation letters

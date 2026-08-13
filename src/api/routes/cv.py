@@ -43,7 +43,10 @@ async def analyze_student_cv(
                 "academic_level": saved_profile.academic_level,
                 "academic_major": saved_profile.academic_major,
                 "gpa": saved_profile.gpa,
-                "research_interests": saved_profile.research_interests
+                "research_interests": saved_profile.research_interests,
+                "target_countries": saved_profile.target_countries,
+                "skills": saved_profile.skills,
+                "age": saved_profile.age
             }
         )
         

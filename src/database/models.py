@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from src.database.database import Base
@@ -14,6 +14,11 @@ class StudentProfile(Base):
     academic_major = Column(String, default="Unknown")
     gpa = Column(Float, default=0.0)
     research_interests = Column(Text, nullable=True)
+    
+    
+    target_countries = Column(JSON, default=list)
+    skills = Column(JSON, default=list)
+    age = Column(Integer, nullable=True)
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"

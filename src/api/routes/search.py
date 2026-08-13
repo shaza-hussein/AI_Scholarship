@@ -23,15 +23,23 @@ def search_scholarships(
                 academic_level=db_profile.academic_level,
                 academic_major=db_profile.academic_major,
                 gpa=db_profile.gpa,
-                research_interests=db_profile.research_interests
+                research_interests=db_profile.research_interests,
+
+                target_countries=db_profile.target_countries,
+                skills=db_profile.skills,
+                age=db_profile.age
             )
         else:
             profile = PydanticStudentProfile(
                 nationality="Unknown",
-                academic_level="Unknown",
+                academic_level="Bachelor",
                 academic_major="Unknown",
                 gpa=0.0,
-                research_interests=""
+                research_interests="",
+
+                target_countries=[],
+                skills=[],
+                age=None
             )
             
         docs = retriever.match_scholarships(profile, query=payload.query, top_k=payload.top_k)

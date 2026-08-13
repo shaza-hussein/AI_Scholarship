@@ -30,9 +30,13 @@ def update_student_profile(payload: ProfileUpdateRequest, db: Session = Depends(
                 "academic_level": saved_profile.academic_level,
                 "academic_major": saved_profile.academic_major,
                 "gpa": saved_profile.gpa,
-                "research_interests": saved_profile.research_interests
+                "research_interests": saved_profile.research_interests,
+                "target_countries": saved_profile.target_countries,
+                "skills": saved_profile.skills,
+                "age": saved_profile.age
             }
         }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -42,13 +46,30 @@ def get_student_profile(session_id: str, db: Session = Depends(get_db)):
     Endpoint to fetch the current profile data to populate the frontend form on page reload.
     """
     db_profile = crud.get_profile(db, session_id)
+    # if not db_profile:
+    #     raise HTTPException(status_code=404, detail="Profile not found.")
+
     if not db_profile:
-        raise HTTPException(status_code=404, detail="Profile not found.")
-        
+        return {
+            "nationality": "",
+            "academic_level": "",
+            "academic_major": "",
+            "gpa": "",
+            "research_interests": "",
+            "target_countries": [],
+            "skills": [],
+            "age": None,
+            "is_new_user": True  
+        }   
+
     return {
         "nationality": db_profile.nationality,
         "academic_level": db_profile.academic_level,
         "academic_major": db_profile.academic_major,
         "gpa": db_profile.gpa,
-        "research_interests": db_profile.research_interests
+        "research_interests": db_profile.research_interests,
+        "target_countries": db_profile.target_countries,
+        "skills": db_profile.skills,
+        "age": db_profile.age,
+        "is_new_user": False
     }

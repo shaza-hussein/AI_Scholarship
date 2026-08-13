@@ -8,6 +8,10 @@ class ProfileData(BaseModel):
     gpa: Optional[float] = Field(None, example=3.5)
     research_interests: Optional[str] = Field(None, example="Digital Marketing and Leadership")
 
+    target_countries: Optional[List[str]] = []
+    skills: Optional[List[str]] = []
+    age: Optional[int] = None
+
 class ProfileUpdateRequest(BaseModel):
     session_id: str = Field(..., example="session-12345")
     profile: ProfileData
