@@ -46,3 +46,19 @@ class CVAnalyzeResponse(BaseModel):
     status: str
     session_id: str
     profile: ProfileData
+
+
+
+class ScholarshipDetailResponse(BaseModel):
+    scholarship_name: str
+    host_country: str
+    academic_level: str
+    academic_major: str
+    funding_category: str
+    funding_amount: Optional[str]
+    standardized_deadline: str
+    description: str
+    scholarship_details: str
+    eligibility: str
+    application_process: str
+    application_link: str

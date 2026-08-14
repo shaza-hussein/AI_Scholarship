@@ -305,12 +305,16 @@ Application Process:
 
 
     def chat_orchestrator(self, profile_data: dict, chat_history: list, retrieved_docs: list, user_message: str, intent: str = None) -> str:
+        
         formatted_context = self._enrich_and_format_context(retrieved_docs)
         
         history_text = ""
         for msg in chat_history:
             history_text += f"{msg.role.capitalize()}: {msg.content}\n"
 
+        profile_text = "\n".join([f"- {k.replace('_', ' ').title()}: {v}" for k, v in profile_data.items() if v])
+
+       
         system_prompt = """
         You are an elite Academic Scholarship Advisor. Assist the student clearly and concisely, utilizing the provided context and chat history.
 
@@ -326,15 +330,21 @@ Application Process:
         6. LANGUAGE: Respond in the exact language used by the user in the 'CURRENT MESSAGE'.
         """
 
+        current_intent = intent if intent else "General Conversation"
+
+        
         user_content = f"""
         STUDENT PROFILE:
-        {profile_data}
+        {profile_text}
         
         CHAT HISTORY:
         {history_text}
         
         RETRIEVED SCHOLARSHIPS CONTEXT:
         {formatted_context}
+        
+        REQUESTED ACTION (INTENT):
+        {current_intent}
         
         CURRENT MESSAGE:
         {user_message}
@@ -345,9 +355,62 @@ Application Process:
             {"role": "user", "content": user_content}
         ]
 
+        
         try:
+            import logging
             response = self.llm.invoke(messages)
             return response.content.strip()
         except Exception as e:
+            import logging
             logging.error(f"Error in chat orchestrator: {e}")
             raise ValueError("Failed to generate chat response.")
+
+
+
+    # def chat_orchestrator(self, profile_data: dict, chat_history: list, retrieved_docs: list, user_message: str, intent: str = None) -> str:
+    #     formatted_context = self._enrich_and_format_context(retrieved_docs)
+        
+    #     history_text = ""
+    #     for msg in chat_history:
+    #         history_text += f"{msg.role.capitalize()}: {msg.content}\n"
+
+    #     system_prompt = """
+    #     You are an elite Academic Scholarship Advisor. Assist the student clearly and concisely, utilizing the provided context and chat history.
+
+    #     CRITICAL RULES:
+    #     1. CONTEXT & MEMORY: Refer to the 'Chat History' for continuity. Base all factual claims, deadlines, and links STRICTLY on the 'Retrieved Scholarships Context'.
+    #     2. ZERO HALLUCINATION: If a deadline, link, or specific requirement is missing in the context, explicitly state that it is not provided. Do not guess.
+    #     3. SMART FILTERING (CRUCIAL): When explaining application steps or eligibility, you MUST filter the information based on the 'STUDENT PROFILE'. If the student is a 'Master' level, strictly ignore any requirements mentioned in the context meant for 'PhD' or 'Postdoc' applicants (e.g., dissertations, postdoctoral invitations).
+    #     4. INTENT HANDLING:
+    #        - 'compare': Generate a clean Markdown table comparing funding, deadlines, and levels of the mentioned scholarships.
+    #        - 'roadmap': Provide a step-by-step application timeline based ONLY on the 'Application Process' in the context, tailored to the student's level.
+    #        - 'explain': Bullet-point the specific eligibility criteria and required documents.
+    #     5. CONCISENESS: Keep general responses brief and impactful to avoid overwhelming the student. Use clean Markdown formatting.
+    #     6. LANGUAGE: Respond in the exact language used by the user in the 'CURRENT MESSAGE'.
+    #     """
+
+    #     user_content = f"""
+    #     STUDENT PROFILE:
+    #     {profile_data}
+        
+    #     CHAT HISTORY:
+    #     {history_text}
+        
+    #     RETRIEVED SCHOLARSHIPS CONTEXT:
+    #     {formatted_context}
+        
+    #     CURRENT MESSAGE:
+    #     {user_message}
+    #     """
+
+    #     messages = [
+    #         {"role": "system", "content": system_prompt},
+    #         {"role": "user", "content": user_content}
+    #     ]
+
+    #     try:
+    #         response = self.llm.invoke(messages)
+    #         return response.content.strip()
+    #     except Exception as e:
+    #         logging.error(f"Error in chat orchestrator: {e}")
+    #         raise ValueError("Failed to generate chat response.")

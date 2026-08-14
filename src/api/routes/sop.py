@@ -48,7 +48,11 @@ async def generate_application_document(
             "academic_level": db_profile.academic_level,
             "academic_major": db_profile.academic_major,
             "gpa": db_profile.gpa,
-            "research_interests": db_profile.research_interests
+            "research_interests": db_profile.research_interests,
+
+            "target_countries": db_profile.target_countries,
+            "skills": db_profile.skills,
+            "age": db_profile.age,
         }
         
         scholarship_details = get_scholarship_details(payload.target_scholarship)

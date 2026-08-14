@@ -21,7 +21,15 @@ async def chat_with_assistant(
         
         db_profile = crud.get_profile(db, payload.session_id)
         profile_dict = {}
-        profile_obj = StudentProfile(nationality="Unknown", academic_level="Bachelor", academic_major="Unknown", gpa=0.0)
+        profile_obj = StudentProfile(
+            nationality="Unknown", 
+            academic_level="Bachelor", 
+            academic_major="Unknown", 
+            gpa=0.0,
+            target_countries=[],
+            skills=[],
+            age=None
+        )
         
         if db_profile:
             profile_dict = {
@@ -29,7 +37,10 @@ async def chat_with_assistant(
                 "academic_level": db_profile.academic_level,
                 "academic_major": db_profile.academic_major,
                 "gpa": db_profile.gpa,
-                "research_interests": db_profile.research_interests
+                "research_interests": db_profile.research_interests,
+                "target_countries": db_profile.target_countries,
+                "skills": db_profile.skills,
+                "age": db_profile.age
             }
             profile_obj = StudentProfile(**profile_dict)
 

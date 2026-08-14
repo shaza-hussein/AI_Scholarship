@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from src.api.dependencies import init_ai_engines
-from src.api.routes import search, cv, sop, chat, profile
+from src.api.routes import search, cv, sop, chat, profile, scholarship
 
 from src.database.database import engine, Base
 from src.database import models
@@ -57,7 +57,7 @@ app.include_router(cv.router)
 app.include_router(sop.router)
 app.include_router(chat.router)
 app.include_router(profile.router)
-
+app.include_router(scholarship.router)
 # 1. Health Check Endpoint
 @app.get("/health", tags=["System"])
 def health_check():
