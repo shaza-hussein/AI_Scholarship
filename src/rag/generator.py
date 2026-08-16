@@ -32,12 +32,13 @@ class ScholarshipGenerator:
        
         self.llm = ChatGroq(
             model="llama-3.1-8b-instant", 
-            temperature=0.1,
+            temperature=0.2,
             # temperature=0.2,        
             max_tokens=1500
         )
         
 # The Dynamic, Interactive, and Professional System Prompt
+
         self.prompt_template = PromptTemplate(
             input_variables=["student_profile", "context", "user_query"],
             template="""You are an elite, highly interactive Academic Scholarship Advisor. Your tone is professional, encouraging, and directly tailored to the student's specific needs.
@@ -56,22 +57,54 @@ Retrieved Scholarships Context:
 
 CRITICAL INSTRUCTIONS & RULES:
 
-1. DYNAMIC & INTENT-DRIVEN RESPONSE: Tailor your response EXACTLY to what the user is asking:
-   - If they ask for GENERAL RECOMMENDATIONS: Briefly list the matching scholarships, explain precisely *why* they fit their profile/major, provide the funding amount and deadline, and include the official link. (DO NOT list the application steps unless explicitly asked).
-   - If they ask HOW TO APPLY: Focus heavily on explaining the "Application Process" steps from the context for the specific scholarship they mentioned.
-   - If they ask about ELIGIBILITY/CONDITIONS: Focus exclusively on the specific requirements, demographics, and constraints of the scholarships.
-   - Make it a natural conversation. Ask them at the end if they want to know more about the application steps for a specific scholarship.
+1. DYNAMIC & INTENT-DRIVEN RESPONSE: Tailor your response EXACTLY to what the user is asking. If they ask how to apply, list the steps clearly. If they ask for general recommendations, summarize why the scholarship fits them.
+2. ZERO HALLUCINATION: Base your answer EXCLUSIVELY on the 'Context'. Never invent names, deadlines, links, or application steps. If the context lacks the answer, clearly state that details are not provided and advise the user to check the official link.
+3. ELIGIBILITY DOUBLE-CHECK: Critically analyze the description. If a scholarship specifies demographic requirements that DO NOT clearly match the 'Student Profile', you MUST add a clear WARNING or exclude it.
+4. STRUCTURED YET NATURAL OUTPUT: Use clean Markdown (bullet points, bold text) to make your response highly readable.
+5. TONE & LANGUAGE: You MUST respond in the EXACT SAME LANGUAGE as the 'Student's Query'.
 
-2. ZERO HALLUCINATION: Base your answer EXCLUSIVELY on the 'Context'. Never invent names, deadlines, links, or application steps. If the context lacks the answer, clearly state: "لا تتوفر لدي تفاصيل حول هذه النقطة، يُرجى مراجعة الرابط الرسمي".
-
-3. ELIGIBILITY DOUBLE-CHECK: Critically analyze the description. If a scholarship specifies demographic requirements (e.g., specific race, gender, minority status) that DO NOT clearly match the 'Student Profile', you MUST add a clear WARNING or exclude it.
-
-4. STRUCTURED YET NATURAL OUTPUT: Use clean Markdown (bullet points, bold text) to make your response highly readable, but keep the text flowing naturally like a human advisor.
-
-5. TONE & LANGUAGE: You MUST respond in the EXACT SAME LANGUAGE as the 'Student's Query'. If the query is in English, reply in English. If it is in French, reply in French. Do not let the student's nationality change the language of your response.
+FINAL AND MOST IMPORTANT RULE:
+No matter what the user asks, if you are discussing a specific scholarship, you MUST conclude your response by printing the official link from the context, using exactly this format:
+**Official Application Link:** [Insert Context Link Here]
 
 Response:"""
         )
+#         self.prompt_template = PromptTemplate(
+#             input_variables=["student_profile", "context", "user_query"],
+#             template="""You are an elite, highly interactive Academic Scholarship Advisor. Your tone is professional, encouraging, and directly tailored to the student's specific needs.
+# Your primary goal is to answer the student's query based STRICTLY on the provided 'Context' scholarships.
+
+# ---
+# Student Profile:
+# {student_profile}
+
+# Student's Query:
+# {user_query}
+
+# Retrieved Scholarships Context:
+# {context}
+# ---
+
+# CRITICAL INSTRUCTIONS & RULES:
+
+# 1. DYNAMIC & INTENT-DRIVEN RESPONSE: Tailor your response EXACTLY to what the user is asking:
+#    - If they ask for GENERAL RECOMMENDATIONS: Briefly list the matching scholarships, explain precisely why they fit, provide the funding amount and deadline.
+#    - If they ask HOW TO APPLY: Focus heavily on explaining the "Application Process" steps from the context.
+#    - If they ask about ELIGIBILITY/CONDITIONS: Focus exclusively on the specific requirements, demographics, and constraints.
+#    - MANDATORY FOOTER: No matter what the user asks, if you are discussing a specific scholarship, you MUST end your response with this exact format:
+#      "**Official Application Link:** [Insert Link Here]"
+#    - Make it a natural conversation. Ask them at the end if they want to know more about the application steps for a specific scholarship.
+
+# 2. ZERO HALLUCINATION: Base your answer EXCLUSIVELY on the 'Context'. Never invent names, deadlines, links, or application steps. If the context lacks the answer, clearly state: "لا تتوفر لدي تفاصيل حول هذه النقطة، يُرجى مراجعة الرابط الرسمي".
+
+# 3. ELIGIBILITY DOUBLE-CHECK: Critically analyze the description. If a scholarship specifies demographic requirements that DO NOT clearly match the 'Student Profile', you MUST add a clear WARNING or exclude it.
+
+# 4. STRUCTURED YET NATURAL OUTPUT: Use clean Markdown (bullet points, bold text) to make your response highly readable.
+
+# 5. TONE & LANGUAGE: You MUST respond in the EXACT SAME LANGUAGE as the 'Student's Query'.
+
+# Response:"""
+#         )
 
 
 
@@ -221,7 +254,7 @@ Application Process:
             "nationality": "String (Extract the country. If not found, output 'Unknown')",
             "academic_level": "String (e.g., 'Bachelor', 'Master', 'PhD'. If not found, output 'Unknown')",
             "academic_major": "String (Extract the specific academic major. If not found, output 'Unknown')",
-            "gpa": Float (Extract the GPA and STRICTLY CONVERT IT to a standard 4.0 scale. If not found, output 0.0),
+            "gpa": "String (Extract the exact GPA value as written in the text, e.g., '85 out of 100' or '3.5/4.0'. Do NOT do any math. If not found, output 'Unknown')",
             "research_interests": "String (A concise summary of technical skills or research focus. If not found, output null)",
             "target_countries": ["String"] (Extract preferred countries for study if mentioned. If not found, output []),
             "skills": ["String"] (Extract technical tools, programming languages, or soft skills. If not found, output []),
@@ -273,9 +306,9 @@ Application Process:
         5. OUTPUT: Return ONLY the final letter text formatted in clean Markdown. Do not include any introductory remarks.
         
         CRITICAL GROUNDING RULES (ZERO HALLUCINATION):
-        - STRICT TRUTH: Use ONLY the provided student profile and scholarship details.
-        - NO EXTENSION: Do NOT fabricate past experiences, projects, awards, or personal backstory not explicitly mentioned in the profile.
-        - ADAPTIVITY: If a piece of information (like volunteer work) is missing, do not invent it. Focus on articulating the student's motivation using ONLY the available facts.
+        - STRICT TRUTH: Use ONLY the explicit facts provided in the "STUDENT PROFILE".
+        - ABSOLUTELY NO FABRICATION: UNDER NO CIRCUMSTANCES should you invent past projects, theses, work experiences, or personal stories. Do not write "My thesis was about X" unless the profile explicitly states it.
+        - ABSTRACTION OVER INVENTION: If you need to demonstrate passion, describe the potential of the skills listed (e.g., "My skills in Machine Learning equip me to...") rather than inventing a fictional past project.
         """
 
         user_content = f"""
