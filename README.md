@@ -1,53 +1,69 @@
-# AI Scholarship Project
+# ScholarAssist - An Intelligent Assistant for Discovering Scholarships and Assisting with Applications
 
-A Python-based scholarship data extraction project focused on collecting scholarship listings for selected fields of study. The repository includes web scrapers for Computer Science, Cybersecurity, Theology, and Web Design, with extracted scholarship data saved as JSON and CSV files.
+ScholarAssist is an advanced, AI-powered academic assistant designed to streamline the scholarship search and application process. Leveraging a dual-store Retrieval-Augmented Generation (RAG) architecture, the system combines deterministic relational filtering (DuckDB) with semantic vector retrieval (ChromaDB) to accurately match applicants with highly relevant funding opportunities. Beyond intelligent search, it features a strict "Zero-Hallucination" generative engine that parses raw student CVs, drafts highly personalized Statements of Purpose (SOPs), and provides factual, step-by-step application roadmaps based exclusively on verified database records.
 
-## Project Overview
+This project is built for prospective students seeking tailored international funding opportunities, academic advisors looking to automate the scholarship matching process, and educational institutions aiming to democratize access to global scholarships through a secure, conversational AI interface.
 
-This project is designed to:
-- Scrape scholarship directory pages for specific majors
-- Extract detailed scholarship information such as name, deadline, award availability, eligibility tags, and application links
-- Save the results in structured JSON format
-- Provide a data foundation for later analysis or dataset generation
+![Scholarship Assistant](./images/hero.png)
 
-## Repository Structure
 
-- `scrapers/`
-  - `scraper_computer_science.py`
-  - `scraper_cybersecurity.py`
-  - `scraper_theology.py`
-  - `scraper_web_design.py`
-- `data/`
-  - `europe_scholarships_detailed.csv`
-  - `europe_scholarships_v2.csv`
-  - `theology_scholarships_data.json`
-  - `web_design_scholarships_data.json`
-- `data_Json/`
-  - `computer_science_scholarships_data.json`
-  - `cybersecurity_scholarships_data.json`
-  - `theology_scholarships_data.json`
-  - `web_design_scholarships_data.json`
-- `requirements.txt`
-- `schema.json`
+## Table of Contents
 
-## Requirements
+- [Problem Statement](#problem-statement)
+- [Solution](#solution)
+- [Features](#features)
+- [System Architecture](#system-architecture)
+- [Tech Stack](#tech-stack)
+- [Demo](#demo)
+- [Project Structure](#project-structure)
+- [Dataset](#dataset)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Evaluation](#evaluation)
+- [Roadmap](#roadmap)
+- [License](#license)
+- [Author](#author)
 
-The project depends on the following Python packages:
 
-- `beautifulsoup4==4.14.3`
-- `certifi==2026.4.22`
-- `charset-normalizer==3.4.7`
-- `idna==3.13`
-- `lxml==6.1.0`
-- `numpy==2.4.4`
-- `pandas==3.0.2`
-- `python-dateutil==2.9.0.post0`
-- `requests==2.33.1`
-- `six==1.17.0`
-- `soupsieve==2.8.3`
-- `typing_extensions==4.15.0`
-- `tzdata==2026.2`
-- `urllib3==2.7.0`
+## Problem Statement
+
+<!-- Describe the problem this project aims to solve. -->
+
+
+
+## Solution
+
+<!-- Explain the proposed solution and how the system addresses the problem. -->
+
+
+## Features
+
+<!-- List the main capabilities of the system. -->
+
+- Feature 1
+- Feature 2
+- Feature 3
+- Feature 4
+- Feature 5
+
+
+## System Architecture
+
+<!-- Explain the overall architecture of the system. -->
+
+
+## Tech Stack
+
+
+## Demo
+
+
+## Project Structure
+
+
+## Dataset
+
+
 
 ## Installation
 
@@ -64,33 +80,22 @@ python -m venv venv
 python -m pip install -r requirements.txt
 ```
 
-## Usage
+## Usage / Running
 
-Each scraper can be executed independently. Example:
 
-```powershell
-python scrapers\scraper_computer_science.py
-```
 
-Repeat the command for other scraper files to collect data for each major.
+## Evaluation
 
-## Output
 
-Each scraper writes a JSON file with extracted scholarship data. Example output file names:
 
-- `computer_science_scholarships_data.json`
-- `cybersecurity_scholarships_data.json`
-- `theology_scholarships_data.json`
-- `web_design_scholarships_data.json`
+## Roadmap
 
-The existing `data/` and `data_Json/` directories contain previously generated scholarship datasets and project sample data.
 
-## Notes
-
-- The scrapers use `requests` and `BeautifulSoup` for HTML parsing.
-- The scripts include delays between requests to reduce the risk of IP blocking.
-- `schema.json` is available for data schema or validation; update it as needed to reflect the exported JSON structure.
 
 ## License
 
 This repository does not include a specific license file. Add a LICENSE if you plan to share or publish the project publicly.
+
+
+## Author
+
