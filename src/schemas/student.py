@@ -37,12 +37,20 @@ class StudentProfile(BaseModel):
         examples=["Computer Science", "Artificial Intelligence"]
     )
     
+    # gpa: float = Field(
+    #     ..., 
+    #     ge=0.0, 
+    #     le=4.0, 
+    #     description="Grade Point Average scaled out of 4.0.",
+    #     examples=[3.8]
+    # )
+
     gpa: float = Field(
         ..., 
         ge=0.0, 
-        le=4.0, 
-        description="Grade Point Average scaled out of 4.0.",
-        examples=[3.8]
+        le=100.0, 
+        description="Grade Point Average scaled out of 4.0 or 100.0.",
+        examples=[3.8, 85.5]
     )
     
     target_countries: Optional[List[str]] = Field(

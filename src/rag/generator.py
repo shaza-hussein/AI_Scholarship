@@ -31,7 +31,7 @@ class ScholarshipGenerator:
         
        
         self.llm = ChatGroq(
-            model="llama-3.1-8b-instant", 
+            model="openai/gpt-oss-20b", 
             temperature=0.2,
             # temperature=0.2,        
             max_tokens=1500
@@ -300,10 +300,11 @@ Application Process:
 
         CRITICAL WRITING RULES:
         1. NO CLICHES: Never start with "My name is..." or "I am writing to apply for...". Start with a strong hook.
-        2. SHOW, DON'T TELL: Demonstrate how the student's background directly aligns with the scholarship's goals.
-        3. TAILORING: The letter MUST explicitly reference details from the "Scholarship Details". Explain WHY this specific program is the perfect fit.
-        4. FORMATTING BY TYPE: Strictly adapt the structure to the requested document type. If it is an "Email", you MUST include a clear Subject Line. If it is a formal "Letter", use appropriate academic formatting.
-        5. OUTPUT: Return ONLY the final letter text formatted in clean Markdown. Do not include any introductory remarks.
+        2. ADAPTIVE TAILORING (CRUCIAL): 
+           - If the "SCHOLARSHIP DETAILS" contain specific goals or requirements, explicitly connect the student's background to them.
+           - If the "SCHOLARSHIP DETAILS" are brief, missing, or just ask the user to "visit the website", DO NOT PANIC OR OUTPUT EMPTY TEXT. Instead, write a powerful, generalized academic cover letter focusing heavily on the student's strengths, skills, and academic potential.
+        3. FORMATTING BY TYPE: Strictly adapt the structure to the requested document type. If it is an "Email", you MUST include a clear Subject Line. If it is a formal "Letter", use appropriate academic formatting.
+        4. MANDATORY OUTPUT: You MUST generate the letter. NEVER return an empty response. Return ONLY the final letter text formatted in clean Markdown. Do not include any introductory or apologetic remarks.
         
         CRITICAL GROUNDING RULES (ZERO HALLUCINATION):
         - STRICT TRUTH: Use ONLY the explicit facts provided in the "STUDENT PROFILE".

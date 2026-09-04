@@ -57,6 +57,8 @@ async def generate_application_document(
         
         scholarship_details = get_scholarship_details(payload.target_scholarship)
         
+        # print(scholarship_details)
+
         generated_text = generator.generate_sop(
             profile_data=profile_dict,
             scholarship_details=scholarship_details,
@@ -64,6 +66,9 @@ async def generate_application_document(
             tone=payload.tone,
             document_type=payload.document_type
         )
+
+        # print(f"Length: {len(generated_text)}")
+        # print(f"Content: '{generated_text}'")
         
         return SOPResponse(generated_text=generated_text)
         
