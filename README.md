@@ -279,13 +279,13 @@ The system requires specific API keys to connect to the LLMs and embedding model
 
 Open the newly created `.env` file and configure the following variables:
 
-####  REQUIRED: Groq API Key for the RAG Generator and heavy NLP extraction.
-####  You can get a free API key from: [https://console.groq.com](https://console.groq.com)
-GROQ_API_KEY="your_groq_api_key_here"
+  ***REQUIRED:*** Groq API Key for the RAG Generator and heavy NLP extraction.
+   You can get a free API key from: [https://console.groq.com](https://console.groq.com)
+   GROQ_API_KEY="your_groq_api_key_here"
 
-#### OPTIONAL BUT RECOMMENDED: Hugging Face Token.
-#### Prevents rate limits and errors when downloading the BAAI/bge-m3 embedding models.
-HF_TOKEN="your_huggingface_token_here"
+ ***OPTIONAL BUT RECOMMENDED:*** Hugging Face Token.
+  Prevents rate limits and errors when downloading the BAAI/bge-m3 embedding models.
+  HF_TOKEN="your_huggingface_token_here"
 
 
 
@@ -347,7 +347,7 @@ The generative layer was evaluated using an LLM-as-a-Judge approach (similar to 
 
 ## License
 
-This repository does not include a specific license file.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 
 ## Author
